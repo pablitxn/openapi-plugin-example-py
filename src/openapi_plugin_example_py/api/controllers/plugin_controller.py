@@ -7,6 +7,7 @@ from openapi_plugin_common import HttpHeaders
 from ...business_logic.handlers import (
     AISampleHandler,
     BlobSampleHandler,
+    CreatePlotHandler,
     SampleHandler,
 )
 from ...business_logic.requests import (
@@ -14,6 +15,8 @@ from ...business_logic.requests import (
     AISampleResponse,
     BlobSampleRequest,
     BlobSampleResponse,
+    CreatePlotRequest,
+    CreatePlotResponse,
     SampleRequest,
     SampleResponse,
 )
@@ -99,3 +102,26 @@ async def blob_sample(
     
     # Handle request
     return await blob_sample_handler.handle_async(request_body)
+
+
+@router.post(
+    "/create-plot",
+    summary="Create a plot from Excel data",
+    description="Downloads Excel file from blob storage, creates a plot, and uploads it back",
+    response_model=CreatePlotResponse
+)
+async def create_plot(
+    request_body: CreatePlotRequest,
+    chat_id: Annotated[str, Header(alias=HttpHeaders.CHAT_ID)] = "",
+    agent_id: Annotated[str, Header(alias=HttpHeaders.AGENT_ID)] = "",
+    agent_version: Annotated[str, Header(alias=HttpHeaders.AGENT_VERSION)] = "",
+    create_plot_handler: CreatePlotHandler = Depends()
+) -> CreatePlotResponse:
+    """Create a plot from Excel data."""
+    # Update headers from request
+    request_body.chat_id = chat_id or request_body.chat_id
+    request_body.agent_id = agent_id or request_body.agent_id
+    request_body.agent_version = agent_version or request_body.agent_version
+    
+    # Handle request
+    return await create_plot_handler.handle_async(request_body)

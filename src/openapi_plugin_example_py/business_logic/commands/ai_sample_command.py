@@ -2,7 +2,13 @@
 import json
 from typing import Optional
 
-from openapi_plugin_common import CommandBase, CommandContextBase
+from openapi_plugin_common import (
+    CommandBase,
+    CommandContextBase,
+    CommandException,
+    ConfigurationException,
+    ValidationException,
+)
 
 from ..options import ExamplePluginOptions
 
@@ -56,7 +62,7 @@ class AISampleCommand(CommandBase[AISampleCommandContext, ExamplePluginOptions])
         """Execute the AI sample command logic."""
         # Check if AI service is available
         if not self._openai_service and context.use_ai:
-            raise ValueError("OpenAI service is not configured")
+            raise ConfigurationException("OpenAI service is not configured")
         
         # Check cache first
         cache_key = f"ai_sample:{context.chat_id}:{hash(context.sample_prompt)}"
@@ -126,7 +132,7 @@ class AISampleCommand(CommandBase[AISampleCommandContext, ExamplePluginOptions])
                     f"AI processing failed: {str(e)}",
                     {"Error": str(e), "ChatId": context.chat_id}
                 )
-            raise
+            raise CommandException(f"AI processing failed: {str(e)}") from e
     
     async def _process_without_ai(self, sample_prompt: str) -> AISampleCommandResult:
         """Process without AI (fallback)."""
@@ -143,7 +149,7 @@ class AISampleCommand(CommandBase[AISampleCommandContext, ExamplePluginOptions])
         """Validate the AI response against schema."""
         # Simple validation - in real implementation would use JSON Schema
         if not response.get("content"):
-            raise ValueError("AI response missing 'content' field")
+            raise ValidationException("AI response missing 'content' field")
     
     async def _get_from_cache(self, key: str) -> Optional[dict]:
         """Get value from cache."""

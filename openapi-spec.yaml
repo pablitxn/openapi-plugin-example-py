@@ -138,6 +138,43 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /create-plot:
+    post:
+      operationId: example_create_plot
+      summary: Create a plot from Excel data
+      description: Downloads Excel file from blob storage, creates a plot, and uploads it back
+      tags:
+        - Data Visualization
+      parameters:
+        - $ref: '#/components/parameters/ChatIdHeader'
+        - $ref: '#/components/parameters/AgentIdHeader'
+        - $ref: '#/components/parameters/AgentVersionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlotRequest'
+      responses:
+        '200':
+          description: Successfully created the plot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePlotResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Excel file not found in blob storage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /health:
     get:
       operationId: health_check
@@ -374,6 +411,85 @@ components:
           description: Additional members for extending problem details
           additionalProperties: true
 
+    CreatePlotRequest:
+      type: object
+      required:
+        - excel_url
+        - plot_type
+        - x_column
+        - y_column
+      properties:
+        excel_url:
+          type: string
+          description: URL of the Excel file in blob storage
+          example: "https://storage.azure.com/data/sales_data.xlsx"
+        plot_type:
+          type: string
+          description: Type of plot to create
+          enum:
+            - line
+            - bar
+            - scatter
+            - pie
+            - histogram
+            - box
+          example: "bar"
+        x_column:
+          type: string
+          description: Column name for X axis
+          example: "Month"
+        y_column:
+          type: string
+          description: Column name for Y axis
+          example: "Sales"
+        title:
+          type: string
+          description: Title for the plot
+          example: "Monthly Sales Report"
+        sheet_name:
+          type: string
+          description: Excel sheet name to read from
+          example: "Sheet1"
+        figure_size:
+          type: array
+          description: Figure size in inches (width, height)
+          items:
+            type: integer
+          minItems: 2
+          maxItems: 2
+          default: [10, 6]
+          example: [10, 6]
+
+    CreatePlotResponse:
+      type: object
+      required:
+        - plot_url
+        - plot_type
+        - file_name
+        - processing_time_ms
+        - data_points
+      properties:
+        plot_url:
+          type: string
+          description: URL of the generated plot image in blob storage
+          example: "https://storage.azure.com/plots/chat-123/plots/plot_bar_20240726_120000_abc123.png"
+        plot_type:
+          type: string
+          description: Type of plot created
+          example: "bar"
+        file_name:
+          type: string
+          description: Name of the generated plot file
+          example: "plot_bar_20240726_120000_abc123.png"
+        processing_time_ms:
+          type: number
+          description: Processing time in milliseconds
+          example: 523.45
+        data_points:
+          type: integer
+          description: Number of data points plotted
+          example: 12
+
   responses:
     BadRequest:
       description: Bad request
@@ -417,5 +533,7 @@ tags:
     description: AI-powered operations using OpenAI integration
   - name: Blob
     description: Blob storage operations
+  - name: Data Visualization
+    description: Data visualization and plotting operations
   - name: System
     description: System and health check operations

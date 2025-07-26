@@ -55,11 +55,32 @@ class AppSettings(BaseSettings):
         description="API version"
     )
     
-    # Security
-    security: SecuritySettings = Field(
-        default_factory=SecuritySettings,
-        description="Security settings"
+    # Security - flattened to allow env loading
+    security_client_id: str = Field(..., description="Application client ID")
+    security_tenant_id: str = Field(
+        default="5b973f99-77df-4beb-b27d-aa0c70b8482c",
+        description="Azure AD tenant ID"
     )
+    security_api_audience: str = Field(..., description="API audience for JWT validation")
+    security_geney_client_id: Optional[str] = Field(
+        default=None,
+        description="GenEY client ID for API access"
+    )
+    security_geney_api_domain: Optional[str] = Field(
+        default=None,
+        description="GenEY API domain"
+    )
+    
+    @property
+    def security(self) -> SecuritySettings:
+        """Get security settings."""
+        return SecuritySettings(
+            client_id=self.security_client_id,
+            tenant_id=self.security_tenant_id,
+            api_audience=self.security_api_audience,
+            geney_client_id=self.security_geney_client_id,
+            geney_api_domain=self.security_geney_api_domain
+        )
     
     # Telemetry
     telemetry: TelemetrySettings = Field(

@@ -9,6 +9,11 @@ from .blob_sample_command import (
     BlobSampleCommandContext,
     BlobSampleCommandResult,
 )
+from .create_plot_command import (
+    CreatePlotCommand,
+    CreatePlotCommandContext,
+    CreatePlotCommandResult,
+)
 from .sample_command import SampleCommand, SampleCommandContext, SampleCommandResult
 
 __all__ = [
@@ -21,4 +26,7 @@ __all__ = [
     "BlobSampleCommand",
     "BlobSampleCommandContext",
     "BlobSampleCommandResult",
+    "CreatePlotCommand",
+    "CreatePlotCommandContext",
+    "CreatePlotCommandResult",
 ]

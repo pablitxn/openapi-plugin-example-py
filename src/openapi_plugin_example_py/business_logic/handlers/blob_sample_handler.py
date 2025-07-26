@@ -3,7 +3,11 @@ import base64
 import time
 from typing import Optional
 
-from openapi_plugin_common import CommandInvoker, RequestHandlerBase
+from openapi_plugin_common import (
+    CommandInvoker,
+    RequestHandlerBase,
+    ValidationException,
+)
 
 from ..commands import BlobSampleCommand, BlobSampleCommandContext
 from ..options import ExamplePluginOptions
@@ -32,12 +36,12 @@ class BlobSampleHandler(RequestHandlerBase[BlobSampleRequest, BlobSampleResponse
         try:
             file_content = base64.b64decode(request.file_content_base64)
         except Exception as e:
-            raise ValueError(f"Invalid base64 content: {str(e)}")
+            raise ValidationException(f"Invalid base64 content: {str(e)}")
         
         # Validate file size
         max_size_bytes = self._plugin_options.max_file_size_mb * 1024 * 1024
         if len(file_content) > max_size_bytes:
-            raise ValueError(
+            raise ValidationException(
                 f"File size ({len(file_content)} bytes) exceeds maximum "
                 f"allowed size ({max_size_bytes} bytes)"
             )
@@ -45,7 +49,7 @@ class BlobSampleHandler(RequestHandlerBase[BlobSampleRequest, BlobSampleResponse
         # Validate file type
         file_extension = request.file_name.split('.')[-1].lower() if '.' in request.file_name else ''
         if file_extension not in self._plugin_options.supported_file_types:
-            raise ValueError(
+            raise ValidationException(
                 f"File type '{file_extension}' is not supported. "
                 f"Supported types: {', '.join(self._plugin_options.supported_file_types)}"
             )
@@ -71,7 +75,7 @@ class BlobSampleHandler(RequestHandlerBase[BlobSampleRequest, BlobSampleResponse
         # Get result from context metadata
         result = context.metadata.get("result")
         if not result:
-            raise ValueError("Command did not produce a result")
+            raise ValidationException("Command did not produce a result")
         
         # Calculate upload time
         upload_time_ms = (time.time() - start_time) * 1000

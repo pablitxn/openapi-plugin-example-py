@@ -138,6 +138,31 @@ Body:
 }
 ```
 
+### 📊 Create Plot Endpoint (NEW!)
+```
+POST /api/plugin/ExamplePlugin/v1/create-plot
+Headers:
+  Authorization: Bearer <jwt-token>
+  x-chat-id: chat-123
+Body:
+{
+  "excel_url": "https://storage.azure.com/data/sales_data.xlsx",
+  "plot_type": "bar",  // Options: line, bar, scatter, pie, histogram, box
+  "x_column": "Month",
+  "y_column": "Sales",
+  "title": "Monthly Sales Report",
+  "sheet_name": "Sheet1",  // Optional
+  "figure_size": [10, 6]   // Optional, width x height in inches
+}
+```
+
+This endpoint:
+1. Downloads an Excel file from blob storage
+2. Reads the data using pandas
+3. Creates a plot using matplotlib
+4. Uploads the generated plot back to blob storage
+5. Returns the URL of the generated plot image
+
 ## Authentication
 
 The plugin uses Azure AD JWT authentication:

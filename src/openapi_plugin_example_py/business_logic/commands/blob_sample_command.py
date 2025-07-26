@@ -2,7 +2,14 @@
 import json
 from typing import Optional
 
-from openapi_plugin_common import CommandBase, CommandContextBase, SupportedFileType
+from openapi_plugin_common import (
+    CommandBase,
+    CommandContextBase,
+    CommandException,
+    ConfigurationException,
+    SupportedFileType,
+    ValidationException,
+)
 
 from ..options import ExamplePluginOptions
 
@@ -54,12 +61,12 @@ class BlobSampleCommand(CommandBase[BlobSampleCommandContext, ExamplePluginOptio
         """Execute the blob sample command logic."""
         # Validate blob service
         if not self._blob_service:
-            raise ValueError("Blob service is not configured")
+            raise ConfigurationException("Blob service is not configured")
         
         # Validate file size
         max_size_bytes = getattr(self, "_options", {}).get("max_file_size_mb", 10) * 1024 * 1024
         if len(context.file_content) > max_size_bytes:
-            raise ValueError(f"File size exceeds maximum allowed size of {max_size_bytes} bytes")
+            raise ValidationException(f"File size exceeds maximum allowed size of {max_size_bytes} bytes")
         
         # Determine file type
         file_type = self._get_file_type(context.file_name)
@@ -130,7 +137,7 @@ class BlobSampleCommand(CommandBase[BlobSampleCommandContext, ExamplePluginOptio
                         "FileName": context.file_name
                     }
                 )
-            raise
+            raise CommandException(f"Failed to upload blob: {str(e)}") from e
     
     def _get_file_type(self, file_name: str) -> SupportedFileType:
         """Determine file type from filename."""

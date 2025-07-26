@@ -20,6 +20,9 @@ from src.openapi_plugin_example_py.api.middlewares.telemetry import (
     TelemetryMiddleware,
 )
 from src.openapi_plugin_example_py.config import get_settings
+from src.openapi_plugin_example_py.infrastructure.command_factory import (
+    CustomCommandInvokerFactory,
+)
 from src.openapi_plugin_example_py.infrastructure.security import JWTBearer
 
 # Configure logging
@@ -54,10 +57,17 @@ async def lifespan(app: FastAPI):
     # Store in app state
     app.state.settings = settings
     app.state.telemetry_service = telemetry_service
-    app.state.command_invoker_factory = CommandInvokerFactory(telemetry_service)
     
-    # Setup dependencies
+    # Setup dependencies first to get services
     await setup_dependencies(app)
+    
+    # Create custom command factory with services
+    app.state.command_invoker_factory = CustomCommandInvokerFactory(
+        telemetry_service=telemetry_service,
+        cache_service=app.state.cache_service,
+        blob_service=app.state.blob_service,
+        openai_service=app.state.openai_service
+    )
     
     logger.info("Example Plugin started successfully")
     
@@ -123,10 +133,12 @@ async def global_exception_handler(request, exc):
 
 
 # Include routers
+from fastapi import Depends
+
 app.include_router(
     plugin_controller.router,
     prefix=f"{settings.api_prefix}/{settings.api_version}",
-    dependencies=[JWTBearer(api_audience=settings.security.api_audience)]
+    dependencies=[Depends(JWTBearer(api_audience=settings.security.api_audience))]
 )
 
 # Health check endpoint (no auth required)

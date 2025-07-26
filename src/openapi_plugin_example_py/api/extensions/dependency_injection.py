@@ -8,6 +8,7 @@ from openapi_plugin_common import AzureBlobService
 from ...business_logic.handlers import (
     AISampleHandler,
     BlobSampleHandler,
+    CreatePlotHandler,
     SampleHandler,
 )
 from ...infrastructure.openai import OpenAIService
@@ -102,12 +103,25 @@ async def get_blob_sample_handler(
     )
 
 
+async def get_create_plot_handler(
+    app: FastAPI = Depends(lambda: app),
+    blob_service = Depends(get_blob_service)
+) -> CreatePlotHandler:
+    """Get create plot handler with dependencies."""
+    return CreatePlotHandler(
+        command_invoker_factory=app.state.command_invoker_factory,
+        plugin_options=app.state.settings.plugin_options,
+        telemetry_service=app.state.telemetry_service
+    )
+
+
 async def setup_dependencies(app: FastAPI):
     """Setup application dependencies."""
     # Override dependencies for handlers
     app.dependency_overrides[SampleHandler] = get_sample_handler
     app.dependency_overrides[AISampleHandler] = get_ai_sample_handler
     app.dependency_overrides[BlobSampleHandler] = get_blob_sample_handler
+    app.dependency_overrides[CreatePlotHandler] = get_create_plot_handler
     
     # Store services in app state for commands
     app.state.cache_service = await get_cache_service(app)
