@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "openapi-plugin-example-py"
+version = "0.1.0"
+description = "Example OpenAPI plugin using common utilities"
+authors = ["Pablo Coronel <me@pablitxn.io>"]
+readme = "README.md"
+packages = [{include = "openapi_plugin_example_py", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openapi-plugin-common-py = {path = "../openapi-plugin-common-py", develop = true}

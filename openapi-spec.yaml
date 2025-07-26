@@ -1,0 +1,421 @@
+openapi: 3.0.0
+info:
+  title: Example Plugin API
+  description: Example OpenAPI plugin demonstrating command/handler pattern with authentication
+  version: 1.0.0
+  contact:
+    name: Plugin Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000/api/plugin/ExamplePlugin/{version}
+    description: Development server
+    variables:
+      version:
+        default: v1
+        enum:
+          - v1
+        description: API version
+  - url: https://api.example.com/api/plugin/ExamplePlugin/{version}
+    description: Production server
+    variables:
+      version:
+        default: v1
+        enum:
+          - v1
+        description: API version
+
+security:
+  - bearerAuth: []
+
+paths:
+  /sample:
+    get:
+      operationId: example_sample
+      summary: Process a sample request
+      description: Processes a sample input and returns a processed response
+      tags:
+        - Sample
+      parameters:
+        - name: sample_input
+          in: query
+          required: true
+          description: The sample input to process
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 1000
+          example: "Hello World"
+        - name: use_cache
+          in: query
+          required: false
+          description: Whether to use caching for this request
+          schema:
+            type: boolean
+            default: true
+        - $ref: '#/components/parameters/ChatIdHeader'
+        - $ref: '#/components/parameters/AgentIdHeader'
+        - $ref: '#/components/parameters/AgentVersionHeader'
+      responses:
+        '200':
+          description: Successfully processed the sample
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SampleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /ai-sample:
+    post:
+      operationId: example_ai_sample
+      summary: Process an AI sample request
+      description: Processes a prompt using AI and returns the generated response
+      tags:
+        - AI
+      parameters:
+        - $ref: '#/components/parameters/ChatIdHeader'
+        - $ref: '#/components/parameters/AgentIdHeader'
+        - $ref: '#/components/parameters/AgentVersionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AISampleRequest'
+      responses:
+        '200':
+          description: Successfully processed the AI request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AISampleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /blob-sample:
+    post:
+      operationId: example_blob_sample
+      summary: Upload a file to blob storage
+      description: Uploads a file to Azure blob storage and returns the blob URL
+      tags:
+        - Blob
+      parameters:
+        - $ref: '#/components/parameters/ChatIdHeader'
+        - $ref: '#/components/parameters/AgentIdHeader'
+        - $ref: '#/components/parameters/AgentVersionHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlobSampleRequest'
+      responses:
+        '200':
+          description: Successfully uploaded the file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlobSampleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /health:
+    get:
+      operationId: health_check
+      summary: Health check endpoint
+      description: Returns the health status of the service
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: ExamplePlugin
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  telemetry_enabled:
+                    type: boolean
+                    example: true
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Azure AD JWT token
+
+  parameters:
+    ChatIdHeader:
+      name: x-chat-id
+      in: header
+      required: false
+      description: Chat session identifier
+      schema:
+        type: string
+      example: "chat-123456"
+    
+    AgentIdHeader:
+      name: x-agent-id
+      in: header
+      required: false
+      description: Agent identifier
+      schema:
+        type: string
+      example: "agent-789"
+    
+    AgentVersionHeader:
+      name: x-agent-version
+      in: header
+      required: false
+      description: Agent version
+      schema:
+        type: string
+      example: "1.0.0"
+
+  schemas:
+    SampleRequest:
+      type: object
+      required:
+        - sample_input
+      properties:
+        sample_input:
+          type: string
+          description: The sample input to process
+          minLength: 1
+          maxLength: 1000
+          example: "Hello World"
+        use_cache:
+          type: boolean
+          description: Whether to use caching for this request
+          default: true
+
+    SampleResponse:
+      type: object
+      required:
+        - sample_response
+      properties:
+        sample_response:
+          type: string
+          description: The processed sample response
+          example: "Processed: HELLO WORLD"
+        cached:
+          type: boolean
+          description: Whether the response was served from cache
+          default: false
+        processing_time_ms:
+          type: number
+          description: Processing time in milliseconds
+          example: 123.45
+
+    AISampleRequest:
+      type: object
+      required:
+        - sample_prompt
+      properties:
+        sample_prompt:
+          type: string
+          description: The prompt to send to the AI model
+          minLength: 1
+          maxLength: 2000
+          example: "Explain quantum computing in simple terms"
+        use_ai:
+          type: boolean
+          description: Whether to use AI for processing
+          default: true
+        validate_schema:
+          type: boolean
+          description: Whether to validate the AI response against the schema
+          default: true
+        temperature:
+          type: number
+          description: Override temperature for AI generation
+          minimum: 0.0
+          maximum: 2.0
+          example: 0.7
+        max_tokens:
+          type: integer
+          description: Override max tokens for AI generation
+          minimum: 1
+          maximum: 4000
+          example: 1000
+
+    AISampleResponse:
+      type: object
+      required:
+        - ai_response
+      properties:
+        ai_response:
+          type: string
+          description: The AI-generated response
+          example: "Quantum computing is a type of computing that uses quantum mechanics..."
+        model_used:
+          type: string
+          description: The AI model that was used
+          example: "gpt-4"
+        tokens_used:
+          type: integer
+          description: Number of tokens consumed
+          example: 150
+        cached:
+          type: boolean
+          description: Whether the response was served from cache
+          default: false
+
+    BlobSampleRequest:
+      type: object
+      required:
+        - file_name
+        - file_content_base64
+      properties:
+        file_name:
+          type: string
+          description: Name of the file to upload
+          pattern: "^[a-zA-Z0-9_\\-\\.]+$"
+          example: "document.pdf"
+        file_content_base64:
+          type: string
+          description: Base64 encoded file content
+          minLength: 1
+        container_name:
+          type: string
+          description: Target container name
+          pattern: "^[a-z0-9\\-]+$"
+          example: "uploaded-files"
+        metadata:
+          type: object
+          description: Additional metadata to store with the blob
+          additionalProperties:
+            type: string
+
+    BlobSampleResponse:
+      type: object
+      required:
+        - blob_url
+        - file_size
+        - container
+      properties:
+        blob_url:
+          type: string
+          description: URL of the uploaded blob
+          example: "https://storage.azure.com/uploaded-files/chat-123/20240115_120000_abc123_document.pdf"
+        file_size:
+          type: integer
+          description: Size of the uploaded file in bytes
+          example: 1024000
+        container:
+          type: string
+          description: Container where the file was stored
+          example: "uploaded-files"
+        upload_time_ms:
+          type: number
+          description: Upload time in milliseconds
+          example: 234.56
+
+    ProblemDetails:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          description: A URI reference that identifies the problem type
+          example: "https://example.com/errors/validation"
+        title:
+          type: string
+          description: A short summary of the problem type
+          example: "Validation Error"
+        status:
+          type: integer
+          description: The HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence
+          example: "The field 'sample_input' is required"
+        instance:
+          type: string
+          description: A URI reference that identifies the specific occurrence
+          example: "/api/plugin/ExamplePlugin/v1/sample"
+        extensions:
+          type: object
+          description: Additional members for extending problem details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+tags:
+  - name: Sample
+    description: Sample operations demonstrating basic functionality
+  - name: AI
+    description: AI-powered operations using OpenAI integration
+  - name: Blob
+    description: Blob storage operations
+  - name: System
+    description: System and health check operations
