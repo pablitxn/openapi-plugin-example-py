@@ -1,8 +1,8 @@
 """Sample request handler."""
-import time
 from typing import Optional
 
 from .base_plugin_handler import BasePluginHandler
+from openapi_plugin_common import BaseLogger
 
 from ..commands import SampleCommand, SampleCommandContext
 from ..options import ExamplePluginOptions
@@ -16,15 +16,23 @@ class SampleHandler(BasePluginHandler[SampleRequest, SampleResponse]):
         self,
         command_invoker_factory,
         plugin_options: ExamplePluginOptions,
-        telemetry_service: Optional[object] = None
+        telemetry_service: Optional[object] = None,
+        logger: Optional[BaseLogger] = None
     ) -> None:
         """Initialize the handler."""
-        super().__init__(command_invoker_factory, plugin_options, telemetry_service)
+        super().__init__(command_invoker_factory, plugin_options, telemetry_service, logger)
     
-    async def execute_async(self, request: SampleRequest) -> SampleResponse:
-        """Execute the sample request."""
-        start_time = time.time()
+    async def _process_async(
+        self,
+        request: SampleRequest,
+        correlation_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        **kwargs
+    ) -> SampleResponse:
+        """Process the sample request.
         
+        The base handler already tracks timing and telemetry.
+        """
         # Create command context
         context = SampleCommandContext(
             chat_id=request.chat_id,
@@ -42,12 +50,9 @@ class SampleHandler(BasePluginHandler[SampleRequest, SampleResponse]):
         if not result:
             raise ValueError("Command did not produce a result")
         
-        # Calculate processing time
-        processing_time_ms = (time.time() - start_time) * 1000
-        
-        # Create response
+        # Create response - base handler tracks the timing
         return SampleResponse(
             sample_response=result.sample_response,
             cached=result.cached,
-            processing_time_ms=processing_time_ms
-        )
+            processing_time_ms=0  # Will be set by the controller
+        ) # todo: fix this shit ^

@@ -1,58 +1,34 @@
 """Telemetry middleware for HTTP requests."""
-import time
-import uuid
-from typing import Callable
+from openapi_plugin_common.middleware import (
+    TelemetryMiddleware as BaseTelemetryMiddleware,
+    TelemetryConfig
+)
 
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
-
-
-class TelemetryMiddleware(BaseHTTPMiddleware):
-    """Middleware for logging HTTP requests and responses."""
+# Re-export the common telemetry middleware with custom configuration
+class TelemetryMiddleware(BaseTelemetryMiddleware):
+    """Middleware for logging HTTP requests and responses with telemetry."""
     
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process the request and add telemetry."""
-        # Generate correlation ID if not present
-        correlation_id = request.headers.get("x-correlation-id", str(uuid.uuid4()))
-        
-        # Start timer
-        start_time = time.time()
-        
-        # Get telemetry service from app state
-        telemetry_service = getattr(request.app.state, "telemetry_service", None)
-        
-        # Log request start
-        if telemetry_service:
-            properties = {
-                "Method": request.method,
-                "Path": request.url.path,
-                "UserAgent": request.headers.get("user-agent", ""),
-                "ChatId": request.headers.get("x-chat-id", ""),
-                "AgentId": request.headers.get("x-agent-id", ""),
-                "CorrelationId": correlation_id
-            }
-            telemetry_service.log_event("HttpRequestStarted", properties)
-        
-        # Process request
-        response = await call_next(request)
-        
-        # Calculate elapsed time
-        elapsed_ms = (time.time() - start_time) * 1000
-        
-        # Add correlation ID to response headers
-        response.headers["X-Correlation-Id"] = correlation_id
-        
-        # Log request completion
-        if telemetry_service:
-            properties["StatusCode"] = str(response.status_code)
-            properties["ElapsedMilliseconds"] = str(elapsed_ms)
-            
-            if response.status_code >= 400:
-                telemetry_service.log_warning(
-                    f"HTTP {response.status_code} for {request.method} {request.url.path}",
-                    properties
-                )
-            else:
-                telemetry_service.log_event("HttpRequestCompleted", properties)
-        
-        return response
+    def __init__(self, app):
+        """Initialize with custom configuration for the example plugin."""
+        config = TelemetryConfig(
+            service_name="openapi-plugin-example",
+            # Include custom headers relevant to this plugin
+            include_headers=[
+                "x-correlation-id", 
+                "x-chat-id", 
+                "x-agent-id",
+                "x-request-id",
+                "user-agent",
+                "x-user-id",
+                "x-session-id"
+            ],
+            # Exclude health check and documentation endpoints
+            exclude_paths={
+                "/health", "/healthz", "/ready", "/readyz",
+                "/docs", "/redoc", "/openapi.json", "/favicon.ico",
+                "/.well-known/ai-plugin.json"
+            },
+            # Log slow requests over 1 second
+            slow_request_threshold_ms=1000.0
+        )
+        super().__init__(app, config=config)

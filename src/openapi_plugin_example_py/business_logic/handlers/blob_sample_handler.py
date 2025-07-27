@@ -1,9 +1,8 @@
 """Blob sample request handler."""
 import base64
-import time
 from typing import Optional
 
-from openapi_plugin_common import ValidationException
+from openapi_plugin_common import ValidationException, BaseLogger
 
 from .base_plugin_handler import BasePluginHandler
 from ..commands import BlobSampleCommand, BlobSampleCommandContext
@@ -18,14 +17,20 @@ class BlobSampleHandler(BasePluginHandler[BlobSampleRequest, BlobSampleResponse]
         self,
         command_invoker_factory,
         plugin_options: ExamplePluginOptions,
-        telemetry_service: Optional[object] = None
+        telemetry_service: Optional[object] = None,
+        logger: Optional[BaseLogger] = None
     ) -> None:
         """Initialize the handler."""
-        super().__init__(command_invoker_factory, plugin_options, telemetry_service)
+        super().__init__(command_invoker_factory, plugin_options, telemetry_service, logger)
     
-    async def execute_async(self, request: BlobSampleRequest) -> BlobSampleResponse:
-        """Execute the blob sample request."""
-        start_time = time.time()
+    async def _process_async(
+        self,
+        request: BlobSampleRequest,
+        correlation_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        **kwargs
+    ) -> BlobSampleResponse:
+        """Process the blob sample request."""
         
         # Decode base64 content
         try:
@@ -71,13 +76,10 @@ class BlobSampleHandler(BasePluginHandler[BlobSampleRequest, BlobSampleResponse]
         if not result:
             raise ValidationException("Command did not produce a result")
         
-        # Calculate upload time
-        upload_time_ms = (time.time() - start_time) * 1000
-        
         # Create response
         return BlobSampleResponse(
             blob_url=result.blob_url,
             file_size=result.file_size,
             container=request.container_name or "uploaded-files",
-            upload_time_ms=upload_time_ms
+            upload_time_ms=0  # Will be set by the controller if needed
         )

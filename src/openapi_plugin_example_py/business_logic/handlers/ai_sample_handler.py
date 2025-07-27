@@ -1,8 +1,8 @@
 """AI sample request handler."""
-import time
 from typing import Optional
 
 from .base_plugin_handler import BasePluginHandler
+from openapi_plugin_common import BaseLogger
 from ..commands import AISampleCommand, AISampleCommandContext
 from ..options import ExamplePluginOptions
 from ..requests import AISampleRequest, AISampleResponse
@@ -15,13 +15,20 @@ class AISampleHandler(BasePluginHandler[AISampleRequest, AISampleResponse]):
         self,
         command_invoker_factory,
         plugin_options: ExamplePluginOptions,
-        telemetry_service: Optional[object] = None
+        telemetry_service: Optional[object] = None,
+        logger: Optional[BaseLogger] = None
     ) -> None:
         """Initialize the handler."""
-        super().__init__(command_invoker_factory, plugin_options, telemetry_service)
+        super().__init__(command_invoker_factory, plugin_options, telemetry_service, logger)
     
-    async def execute_async(self, request: AISampleRequest) -> AISampleResponse:
-        """Execute the AI sample request."""
+    async def _process_async(
+        self,
+        request: AISampleRequest,
+        correlation_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        **kwargs
+    ) -> AISampleResponse:
+        """Process the AI sample request."""
         # Override options if provided in request
         if request.temperature is not None and self._plugin_options.openai:
             self._plugin_options.openai.temperature = request.temperature

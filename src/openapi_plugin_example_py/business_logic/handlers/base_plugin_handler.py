@@ -1,6 +1,11 @@
 """Base handler for plugin requests with command execution support."""
-from typing import Type, TypeVar
-from openapi_plugin_common import CommandBase, CommandInvoker, RequestHandlerBase
+from typing import Type, TypeVar, Optional
+from openapi_plugin_common import (
+    CommandBase, 
+    CommandInvoker, 
+    BaseRequestHandler,
+    BaseLogger
+)
 from ..options import ExamplePluginOptions
 
 TRequest = TypeVar('TRequest')
@@ -9,17 +14,26 @@ TCommand = TypeVar('TCommand', bound=CommandBase)
 TContext = TypeVar('TContext')
 
 
-class BasePluginHandler(RequestHandlerBase[TRequest, TResponse]):
-    """Base handler with command execution support."""
+class BasePluginHandler(BaseRequestHandler[TRequest, TResponse]):
+    """Base handler with command execution support for the example plugin."""
     
     def __init__(
         self,
         command_invoker_factory,
         plugin_options: ExamplePluginOptions,
-        telemetry_service=None
+        telemetry_service=None,
+        logger: Optional[BaseLogger] = None
     ):
         """Initialize the handler."""
-        super().__init__(telemetry_service)
+        # Create a command invoker from the factory
+        command_invoker = CommandInvoker(command_invoker_factory)
+        
+        super().__init__(
+            command_invoker=command_invoker,
+            telemetry_service=telemetry_service,
+            logger=logger,
+            options=plugin_options
+        )
         self._command_invoker_factory = command_invoker_factory
         self._plugin_options = plugin_options
     

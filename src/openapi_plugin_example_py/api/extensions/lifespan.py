@@ -57,8 +57,11 @@ async def lifespan(app: FastAPI):
         telemetry_service=telemetry_service,
         cache_service=app.state.cache_service,
         blob_service=app.state.blob_service,
-        llm_provider=app.state.llm_provider
-    )
+        llm_provider=app.state.llm_provider,
+        enable_command_logging=True,  # Enable command event logging
+        session_id=None,  # Will generate a UUID for the session
+        user_id=None  # Can be set from auth context later
+    ) # todo: check this shit
     
     logger.info("Example Plugin started successfully")
     logger.info(f"Blob service configured: {app.state.blob_service is not None}")

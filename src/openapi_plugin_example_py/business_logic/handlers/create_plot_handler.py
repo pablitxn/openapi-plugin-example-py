@@ -1,8 +1,7 @@
 """Create plot request handler."""
-import time
 from typing import Optional
 
-from openapi_plugin_common import ValidationException
+from openapi_plugin_common import ValidationException, BaseLogger
 
 from .base_plugin_handler import BasePluginHandler
 from ..commands import CreatePlotCommand, CreatePlotCommandContext
@@ -17,15 +16,20 @@ class CreatePlotHandler(BasePluginHandler[CreatePlotRequest, CreatePlotResponse]
         self,
         command_invoker_factory,
         plugin_options: ExamplePluginOptions,
-        telemetry_service: Optional[object] = None
+        telemetry_service: Optional[object] = None,
+        logger: Optional[BaseLogger] = None
     ) -> None:
         """Initialize the handler."""
-        super().__init__(command_invoker_factory, plugin_options, telemetry_service)
+        super().__init__(command_invoker_factory, plugin_options, telemetry_service, logger)
     
-    async def execute_async(self, request: CreatePlotRequest) -> CreatePlotResponse:
-        """Execute the create plot request."""
-        start_time = time.time()
-        
+    async def _process_async(
+        self,
+        request: CreatePlotRequest,
+        correlation_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        **kwargs
+    ) -> CreatePlotResponse:
+        """Process the create plot request."""
         # Validate request
         if not request.excel_url:
             raise ValidationException("Excel URL is required")
@@ -55,14 +59,11 @@ class CreatePlotHandler(BasePluginHandler[CreatePlotRequest, CreatePlotResponse]
         if not result:
             raise ValidationException("Command did not produce a result")
         
-        # Calculate processing time
-        processing_time_ms = (time.time() - start_time) * 1000
-        
         # Create response
         return CreatePlotResponse(
             plot_url=result.plot_url,
             plot_type=request.plot_type,
             file_name=result.file_name,
-            processing_time_ms=processing_time_ms,
+            processing_time_ms=0,  # Will be set by the controller if needed
             data_points=result.data_points
         )
