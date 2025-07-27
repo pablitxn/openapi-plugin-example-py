@@ -140,9 +140,10 @@ async def test_create_plot():
                 blob_url = upload_response.json()["blob_url"]
                 
                 # Now create the plot
+                # For filesystem storage, we can also use the direct file path
                 plot_data = {
-                    "excel_url": blob_url,
-                    "plot_type": "bar",
+                    "excel_url": f"file://{Path('./mock_storage/data/sales_data.xlsx').absolute()}",
+                    "plot_type": "bar", 
                     "x_column": "Month",
                     "y_column": "Sales",
                     "title": "Monthly Sales Report",
