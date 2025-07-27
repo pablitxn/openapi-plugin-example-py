@@ -79,14 +79,14 @@ class TestAISampleCommand:
         assert "result" in sample_context.metadata
         result = sample_context.metadata["result"]
         assert isinstance(result, AISampleCommandResult)
-        assert result.ai_response == "AI generated response"
-        assert result.model_used == "gpt-4"
-        assert result.tokens_used == 150
+        assert result.content == "AI generated response"
+        assert result.model == "gpt-4"
+        assert result.total_tokens == 150
 
         # Verify service calls
         mock_llm_provider.generate_completion.assert_called_once_with(
-            system_prompt="You are a helpful AI assistant for processing sample requests.",
-            user_prompt="Test prompt for AI",
+            system_prompt="You are a helpful assistant.",
+            user_prompt="User: Test prompt for AI",
             chat_id="test-chat-123"
         )
         mock_telemetry_service.log_event.assert_called_once()
@@ -110,9 +110,14 @@ class TestAISampleCommand:
         """Test command execution with cache hit."""
         # Arrange
         cached_data = {
-            "response": "Cached AI response",
+            "id": "cached-123",
+            "content": "Cached AI response",
             "model": "gpt-3.5",
-            "tokens": 100
+            "total_tokens": 100,
+            "prompt_tokens": 30,
+            "completion_tokens": 70,
+            "finish_reason": "stop",
+            "created": 1234567890
         }
         mock_cache_service.get.return_value = json.dumps(cached_data)
         
@@ -128,9 +133,9 @@ class TestAISampleCommand:
         # Assert
         assert "result" in sample_context.metadata
         result = sample_context.metadata["result"]
-        assert result.ai_response == "Cached AI response"
-        assert result.model_used == "gpt-3.5"
-        assert result.tokens_used == 100
+        assert result.content == "Cached AI response"
+        assert result.model == "gpt-3.5"
+        assert result.total_tokens == 100
 
         # Verify OpenAI was not called due to cache hit
         mock_llm_provider.generate_completion.assert_not_called()
@@ -141,27 +146,21 @@ class TestAISampleCommand:
     ):
         """Test command execution without AI (fallback mode)."""
         # Arrange
-        # Testing without AI (fallback mode)
+        # Testing without AI - should raise exception since LLM provider is required
         command = AISampleCommand(
             telemetry_service=mock_telemetry_service,
             cache_service=mock_cache_service
         )
 
-        # Act
-        await command.execute_command_async(sample_context)
-
-        # Assert
-        assert "result" in sample_context.metadata
-        result = sample_context.metadata["result"]
-        assert result.ai_response == "Fallback response for: Test prompt for AI"
-        assert result.model_used == "fallback"
-        assert result.tokens_used == 0
+        # Act & Assert
+        with pytest.raises(ConfigurationException, match="LLM provider is not configured"):
+            await command.execute_command_async(sample_context)
 
     @pytest.mark.asyncio
     async def test_process_with_ai_validation_failure(
         self, mock_telemetry_service, mock_llm_provider, sample_context
     ):
-        """Test AI processing with schema validation failure."""
+        """Test AI processing with missing content."""
         # Arrange
         response = MagicMock()
         # Missing 'content' attribute
@@ -175,9 +174,11 @@ class TestAISampleCommand:
             llm_provider=mock_llm_provider
         )
 
-        # Act & Assert
-        with pytest.raises(CommandException, match="AI processing failed"):
-            await command._process_with_ai(sample_context)
+        # Act - should handle None content gracefully
+        result = await command._process_with_ai(sample_context)
+        
+        # Assert
+        assert result.content is None  # None content is passed through
 
     @pytest.mark.asyncio
     async def test_process_with_ai_exception_handling(
@@ -375,5 +376,5 @@ class TestAISampleCommand:
         # Assert
         assert "result" in sample_context.metadata
         result = sample_context.metadata["result"]
-        assert result.ai_response == ""  # Empty due to missing content field
-        assert result.model_used == "gpt-4"
+        assert result.content == ""  # Empty due to missing content field
+        assert result.model == "gpt-4"

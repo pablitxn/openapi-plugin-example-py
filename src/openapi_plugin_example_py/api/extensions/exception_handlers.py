@@ -1,5 +1,6 @@
 """Global exception handlers."""
 import logging
+import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -15,42 +16,48 @@ def configure_exception_handlers(app: FastAPI) -> None:
     
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        """Global exception handler using BaseExceptionHandler."""
+        """Global exception handler."""
         # Get settings
         settings = get_settings()
         
         # Get services from app state
-        telemetry_service = getattr(app.state, "telemetry_service", None)
         base_logger = getattr(app.state, "logger", None)
         
         # Create base logger if not available
         if not base_logger:
             config = LoggerConfig(name="exception_handler")
-            base_logger = BaseLogger(config, telemetry_service)
-        
-        # Create exception handler
-        exception_handler = BaseExceptionHandler(
-            telemetry_service=telemetry_service,
-            logger=base_logger,
-            include_stack_trace=settings.environment == "development"
-        )
+            base_logger = BaseLogger(config, None)
         
         # Extract request context
-        correlation_id = request.headers.get("x-correlation-id")
-        user_id = request.headers.get("x-user-id")
+        correlation_id = request.headers.get("x-correlation-id", "")
         
-        # Handle the exception and get problem details
-        problem = exception_handler.handle_exception(
-            exception=exc,
-            correlation_id=correlation_id,
-            request_path=str(request.url),
-            user_id=user_id,
-            method=request.method,
-            headers={k: v for k, v in request.headers.items() if k.lower().startswith("x-")}
+        # Log the error
+        base_logger.error(
+            f"Unhandled exception: {type(exc).__name__}: {str(exc)}",
+            extra={
+                "exception_type": type(exc).__name__,
+                "exception_message": str(exc),
+                "request_path": str(request.url),
+                "request_method": request.method,
+                "correlation_id": correlation_id
+            }
         )
         
+        # Create response content
+        content = {
+            "type": "https://tools.ietf.org/html/rfc7231#section-6.6.1",
+            "title": "Internal Server Error",
+            "status": 500,
+            "detail": str(exc) if settings.environment == "development" else "An error occurred while processing your request.",
+            "instance": str(request.url)
+        }
+        
+        # Add stack trace in development
+        if settings.environment == "development":
+            content["stackTrace"] = traceback.format_exc()
+        
         return JSONResponse(
-            status_code=problem.status,
-            content=problem.model_dump(),
+            status_code=500,
+            content=content,
             headers={"X-Correlation-Id": correlation_id} if correlation_id else {}
         )

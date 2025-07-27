@@ -2,7 +2,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query
-from openapi_plugin_common import HttpHeaders
+from openapi_plugin_common.http import HttpHeaders
 
 from ...business_logic.handlers import (
     AISampleHandler,

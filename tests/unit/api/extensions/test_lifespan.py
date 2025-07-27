@@ -5,6 +5,7 @@ from fastapi import FastAPI
 import logging
 
 from src.openapi_plugin_example_py.api.extensions.app_lifespan import ExamplePluginLifespanManager
+from openapi_plugin_common.lifespan import LifespanConfig
 
 
 class TestExamplePluginLifespanManager:
@@ -42,9 +43,18 @@ class TestExamplePluginLifespanManager:
         logger.error = MagicMock()
         logger.warning = MagicMock()
         return logger
+    
+    @pytest.fixture
+    def lifespan_config(self, mock_logger):
+        """Create a lifespan config."""
+        return LifespanConfig(
+            app_name="Test App",
+            logger=mock_logger,
+            telemetry_service=None
+        )
 
     @pytest.mark.asyncio
-    async def test_startup_with_telemetry_enabled(self, mock_app, mock_settings, mock_logger):
+    async def test_startup_with_telemetry_enabled(self, mock_app, mock_settings, mock_logger, lifespan_config):
         """Test startup with telemetry enabled."""
         with patch('src.openapi_plugin_example_py.api.extensions.app_lifespan.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
@@ -56,9 +66,13 @@ class TestExamplePluginLifespanManager:
                 with patch('src.openapi_plugin_example_py.api.extensions.app_lifespan.setup_dependencies') as mock_setup:
                     mock_setup.return_value = None
                     
-                    # Create manager with mock logger
-                    manager = ExamplePluginLifespanManager()
-                    manager.logger = mock_logger
+                    # Mock app.state attributes that setup_dependencies creates
+                    mock_app.state.cache_service = MagicMock()
+                    mock_app.state.blob_service = MagicMock()
+                    mock_app.state.llm_provider = MagicMock()
+                    
+                    # Create manager with config
+                    manager = ExamplePluginLifespanManager(lifespan_config)
                     
                     # Run startup
                     await manager.startup(mock_app)
@@ -81,7 +95,7 @@ class TestExamplePluginLifespanManager:
                     mock_logger.info.assert_any_call("Telemetry service initialized")
 
     @pytest.mark.asyncio
-    async def test_startup_with_telemetry_disabled(self, mock_app, mock_settings, mock_logger):
+    async def test_startup_with_telemetry_disabled(self, mock_app, mock_settings, mock_logger, lifespan_config):
         """Test startup with telemetry disabled."""
         mock_settings.telemetry.enabled = False
         
@@ -91,9 +105,13 @@ class TestExamplePluginLifespanManager:
             with patch('src.openapi_plugin_example_py.api.extensions.app_lifespan.setup_dependencies') as mock_setup:
                 mock_setup.return_value = None
                 
+                # Mock app.state attributes
+                mock_app.state.cache_service = MagicMock()
+                mock_app.state.blob_service = MagicMock()
+                mock_app.state.llm_provider = MagicMock()
+                
                 # Create manager
-                manager = ExamplePluginLifespanManager()
-                manager.logger = mock_logger
+                manager = ExamplePluginLifespanManager(lifespan_config)
                 
                 # Run startup
                 await manager.startup(mock_app)
@@ -105,7 +123,7 @@ class TestExamplePluginLifespanManager:
                 mock_setup.assert_called_once_with(mock_app)
 
     @pytest.mark.asyncio
-    async def test_startup_telemetry_initialization_failure(self, mock_app, mock_settings, mock_logger):
+    async def test_startup_telemetry_initialization_failure(self, mock_app, mock_settings, mock_logger, lifespan_config):
         """Test startup when telemetry initialization fails."""
         with patch('src.openapi_plugin_example_py.api.extensions.app_lifespan.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
@@ -117,9 +135,13 @@ class TestExamplePluginLifespanManager:
                 with patch('src.openapi_plugin_example_py.api.extensions.app_lifespan.setup_dependencies') as mock_setup:
                     mock_setup.return_value = None
                     
+                    # Mock app.state attributes
+                    mock_app.state.cache_service = MagicMock()
+                    mock_app.state.blob_service = MagicMock()
+                    mock_app.state.llm_provider = MagicMock()
+                    
                     # Create manager
-                    manager = ExamplePluginLifespanManager()
-                    manager.logger = mock_logger
+                    manager = ExamplePluginLifespanManager(lifespan_config)
                     
                     # Run startup
                     await manager.startup(mock_app)
@@ -131,7 +153,7 @@ class TestExamplePluginLifespanManager:
                     mock_logger.error.assert_called_with("Failed to initialize telemetry: Telemetry init failed")
 
     @pytest.mark.asyncio
-    async def test_startup_with_empty_connection_string(self, mock_app, mock_settings, mock_logger):
+    async def test_startup_with_empty_connection_string(self, mock_app, mock_settings, mock_logger, lifespan_config):
         """Test startup when telemetry connection string is empty."""
         mock_settings.telemetry.connection_string = ""
         
@@ -141,9 +163,13 @@ class TestExamplePluginLifespanManager:
             with patch('src.openapi_plugin_example_py.api.extensions.app_lifespan.setup_dependencies') as mock_setup:
                 mock_setup.return_value = None
                 
+                # Mock app.state attributes
+                mock_app.state.cache_service = MagicMock()
+                mock_app.state.blob_service = MagicMock()
+                mock_app.state.llm_provider = MagicMock()
+                
                 # Create manager
-                manager = ExamplePluginLifespanManager()
-                manager.logger = mock_logger
+                manager = ExamplePluginLifespanManager(lifespan_config)
                 
                 # Run startup
                 await manager.startup(mock_app)
@@ -152,7 +178,7 @@ class TestExamplePluginLifespanManager:
                 assert mock_app.state.telemetry_service is None
 
     @pytest.mark.asyncio
-    async def test_startup_debug_logging(self, mock_app, mock_settings, mock_logger):
+    async def test_startup_debug_logging(self, mock_app, mock_settings, mock_logger, lifespan_config):
         """Test that startup logs debug information."""
         with patch('src.openapi_plugin_example_py.api.extensions.app_lifespan.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
@@ -167,8 +193,7 @@ class TestExamplePluginLifespanManager:
                     mock_app.state.cache_service = MagicMock()
                     
                     # Create manager
-                    manager = ExamplePluginLifespanManager()
-                    manager.logger = mock_logger
+                    manager = ExamplePluginLifespanManager(lifespan_config)
                     
                     # Run startup
                     await manager.startup(mock_app)
@@ -180,10 +205,10 @@ class TestExamplePluginLifespanManager:
                     mock_logger.info.assert_any_call("Cache service configured: True")
 
     @pytest.mark.asyncio
-    async def test_shutdown(self, mock_app):
+    async def test_shutdown(self, mock_app, lifespan_config):
         """Test shutdown method."""
         # Create manager
-        manager = ExamplePluginLifespanManager()
+        manager = ExamplePluginLifespanManager(lifespan_config)
         
         # Run shutdown (should complete without error)
         await manager.shutdown(mock_app)

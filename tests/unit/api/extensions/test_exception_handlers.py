@@ -61,56 +61,40 @@ class TestExceptionHandlers:
         handler = mock_app.exception_handlers[Exception]
         
         test_exception = ValueError("Test error message")
-        mock_app.state.telemetry_service = MagicMock()
+        mock_app.state.logger = MagicMock()
+        
+        # Set up request headers
+        mock_request.headers = {
+            "x-correlation-id": "test-correlation-id",
+            "x-user-id": "test-user"
+        }
+        mock_request.method = "POST"
         
         with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
             
-            with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseExceptionHandler') as mock_exception_handler:
-                mock_handler_instance = MagicMock()
-                mock_exception_handler.return_value = mock_handler_instance
-                
-                mock_problem = MagicMock()
-                mock_problem.status = 500
-                mock_problem.model_dump.return_value = {
-                    "type": "about:blank",
-                    "title": "Internal Server Error",
-                    "status": 500,
-                    "detail": "Test error message",
-                    "instance": "http://test.com/api/test"
-                }
-                mock_handler_instance.handle_exception.return_value = mock_problem
-                
-                # Set up request headers
-                mock_request.headers = {
-                    "x-correlation-id": "test-correlation-id",
-                    "x-user-id": "test-user"
-                }
-                mock_request.method = "POST"
-                
-                # Act
-                response = await handler(mock_request, test_exception)
-                
-                # Assert
-                assert isinstance(response, JSONResponse)
-                assert response.status_code == 500
-                
-                # Verify exception handler was created with correct params
-                mock_exception_handler.assert_called_once_with(
-                    telemetry_service=mock_app.state.telemetry_service,
-                    logger=mock_exception_handler.call_args[1]['logger'],
-                    include_stack_trace=True  # development mode
-                )
-                
-                # Verify handle_exception was called with correct params
-                mock_handler_instance.handle_exception.assert_called_once_with(
-                    exception=test_exception,
-                    correlation_id="test-correlation-id",
-                    request_path="http://test.com/api/test",
-                    user_id="test-user",
-                    method="POST",
-                    headers={"x-correlation-id": "test-correlation-id", "x-user-id": "test-user"}
-                )
+            # Act
+            response = await handler(mock_request, test_exception)
+            
+            # Assert
+            assert isinstance(response, JSONResponse)
+            assert response.status_code == 500
+            
+            # Verify response content in development mode
+            import json
+            content = json.loads(response.body)
+            assert content["type"] == "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+            assert content["title"] == "Internal Server Error"
+            assert content["status"] == 500
+            assert content["detail"] == "Test error message"  # Full error in development
+            assert content["instance"] == "http://test.com/api/test"
+            assert "stackTrace" in content  # Stack trace in development
+            
+            # Verify logging
+            mock_app.state.logger.error.assert_called_once()
+            
+            # Verify response headers
+            assert response.headers.get("X-Correlation-Id") == "test-correlation-id"
 
     @pytest.mark.asyncio
     async def test_global_exception_handler_production(self, mock_app, mock_request):
@@ -120,31 +104,21 @@ class TestExceptionHandlers:
         handler = mock_app.exception_handlers[Exception]
         
         test_exception = RuntimeError("Sensitive error details")
-        mock_app.state.telemetry_service = None  # No telemetry
+        mock_app.state.logger = None  # No logger
         
         mock_settings = MagicMock()
         mock_settings.environment = "production"
         
+        # Set up request with no headers
+        mock_request.headers = {}
+        mock_request.method = "GET"
+        
         with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
             
-            with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseExceptionHandler') as mock_exception_handler:
-                mock_handler_instance = MagicMock()
-                mock_exception_handler.return_value = mock_handler_instance
-                
-                mock_problem = MagicMock()
-                mock_problem.status = 500
-                mock_problem.model_dump.return_value = {
-                    "type": "about:blank",
-                    "title": "Internal Server Error",
-                    "status": 500,
-                    "instance": "http://test.com/api/test"
-                }
-                mock_handler_instance.handle_exception.return_value = mock_problem
-                
-                # Set up request with no headers
-                mock_request.headers = {}
-                mock_request.method = "GET"
+            with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseLogger') as mock_base_logger:
+                mock_logger_instance = MagicMock()
+                mock_base_logger.return_value = mock_logger_instance
                 
                 # Act
                 response = await handler(mock_request, test_exception)
@@ -152,12 +126,19 @@ class TestExceptionHandlers:
                 # Assert
                 assert response.status_code == 500
                 
-                # Verify exception handler was created with production settings
-                mock_exception_handler.assert_called_once_with(
-                    telemetry_service=None,  # No telemetry in this test
-                    logger=mock_exception_handler.call_args[1]['logger'],
-                    include_stack_trace=False  # production mode
-                )
+                # Verify response content in production mode
+                import json
+                content = json.loads(response.body)
+                assert content["type"] == "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+                assert content["title"] == "Internal Server Error"
+                assert content["status"] == 500
+                assert content["detail"] == "An error occurred while processing your request."  # Generic message in production
+                assert content["instance"] == "http://test.com/api/test"
+                assert "stackTrace" not in content  # No stack trace in production
+                
+                # Verify logger was created
+                mock_base_logger.assert_called_once()
+                mock_logger_instance.error.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_global_exception_handler_no_telemetry(self, mock_request, mock_settings):
@@ -181,30 +162,26 @@ class TestExceptionHandlers:
         
         test_exception = Exception("Test exception")
         
+        # Update request 
+        mock_request.app = app
+        mock_request.headers = {}
+        mock_request.method = "GET"
+        
         with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
             
-            with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseExceptionHandler') as mock_exception_handler:
-                mock_handler_instance = MagicMock()
-                mock_exception_handler.return_value = mock_handler_instance
-                
-                mock_problem = MagicMock()
-                mock_problem.status = 500
-                mock_problem.model_dump.return_value = {"status": 500}
-                mock_handler_instance.handle_exception.return_value = mock_problem
-                
-                # Update request 
-                mock_request.app = app
-                mock_request.headers = {}
-                mock_request.method = "GET"
+            with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseLogger') as mock_base_logger:
+                mock_logger_instance = MagicMock()
+                mock_base_logger.return_value = mock_logger_instance
                 
                 # Act
                 response = await handler(mock_request, test_exception)
                 
                 # Assert
                 assert response.status_code == 500
-                # BaseExceptionHandler should be instantiated even without telemetry
-                mock_exception_handler.assert_called_once()
+                # BaseLogger should be instantiated when no logger exists
+                mock_base_logger.assert_called_once()
+                mock_logger_instance.error.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_global_exception_handler_with_telemetry_none(self, mock_app, mock_request, mock_settings):
@@ -215,33 +192,21 @@ class TestExceptionHandlers:
         
         test_exception = Exception("Test exception")
         mock_app.state.telemetry_service = None  # Explicitly None
+        mock_app.state.logger = MagicMock()  # Existing logger
+        
+        mock_request.headers = {}
+        mock_request.method = "GET"
         
         with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
             
-            with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseExceptionHandler') as mock_exception_handler:
-                mock_handler_instance = MagicMock()
-                mock_exception_handler.return_value = mock_handler_instance
-                
-                mock_problem = MagicMock()
-                mock_problem.status = 500
-                mock_problem.model_dump.return_value = {"status": 500}
-                mock_handler_instance.handle_exception.return_value = mock_problem
-                
-                mock_request.headers = {}
-                mock_request.method = "GET"
-                
-                # Act
-                response = await handler(mock_request, test_exception)
-                
-                # Assert
-                assert response.status_code == 500
-                # BaseExceptionHandler should be instantiated with None telemetry
-                mock_exception_handler.assert_called_once_with(
-                    telemetry_service=None,
-                    logger=mock_exception_handler.call_args[1]['logger'],
-                    include_stack_trace=True
-                )
+            # Act
+            response = await handler(mock_request, test_exception)
+            
+            # Assert
+            assert response.status_code == 500
+            # Should use existing logger
+            mock_app.state.logger.error.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_global_exception_handler_response_content(self, mock_app, mock_request, mock_settings):
@@ -251,36 +216,28 @@ class TestExceptionHandlers:
         handler = mock_app.exception_handlers[Exception]
         
         test_exception = Exception("Test exception")
-        expected_content = {
-            "type": "about:blank",
-            "title": "Internal Server Error",
-            "status": 500,
-            "detail": "Test exception",
-            "instance": "http://test.com/api/test"
-        }
+        mock_app.state.logger = MagicMock()
+        
+        mock_request.headers = {}
+        mock_request.method = "GET"
         
         with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
             
-            with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseExceptionHandler') as mock_exception_handler:
-                mock_handler_instance = MagicMock()
-                mock_exception_handler.return_value = mock_handler_instance
-                
-                mock_problem = MagicMock()
-                mock_problem.status = 500
-                mock_problem.model_dump.return_value = expected_content
-                mock_handler_instance.handle_exception.return_value = mock_problem
-                
-                mock_request.headers = {}
-                mock_request.method = "GET"
-                
-                # Act
-                response = await handler(mock_request, test_exception)
-                
-                # Assert
-                assert response.status_code == 500
-                # JSONResponse content would be the expected_content
-                assert response.body  # Response has content
+            # Act
+            response = await handler(mock_request, test_exception)
+            
+            # Assert
+            assert response.status_code == 500
+            # JSONResponse content would be the expected_content
+            assert response.body  # Response has content
+            
+            import json
+            content = json.loads(response.body)
+            assert content["type"] == "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+            assert content["title"] == "Internal Server Error"
+            assert content["status"] == 500
+            assert content["instance"] == "http://test.com/api/test"
     
     @pytest.mark.asyncio
     async def test_global_exception_handler_with_correlation_id(self, mock_app, mock_request, mock_settings):
@@ -290,31 +247,21 @@ class TestExceptionHandlers:
         handler = mock_app.exception_handlers[Exception]
         
         test_exception = Exception("Test exception")
-        mock_app.state.telemetry_service = MagicMock()
-        mock_app.state.logger = None
+        mock_app.state.logger = MagicMock()
+        
+        # Set up request with correlation ID
+        mock_request.headers = {"x-correlation-id": "test-correlation-123"}
+        mock_request.method = "GET"
         
         with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
             
-            with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseExceptionHandler') as mock_exception_handler:
-                mock_handler_instance = MagicMock()
-                mock_exception_handler.return_value = mock_handler_instance
-                
-                mock_problem = MagicMock()
-                mock_problem.status = 500
-                mock_problem.model_dump.return_value = {"status": 500}
-                mock_handler_instance.handle_exception.return_value = mock_problem
-                
-                # Set up request with correlation ID
-                mock_request.headers = {"x-correlation-id": "test-correlation-123"}
-                mock_request.method = "GET"
-                
-                # Act
-                response = await handler(mock_request, test_exception)
-                
-                # Assert
-                assert response.status_code == 500
-                assert response.headers.get("X-Correlation-Id") == "test-correlation-123"
+            # Act
+            response = await handler(mock_request, test_exception)
+            
+            # Assert
+            assert response.status_code == 500
+            assert response.headers.get("X-Correlation-Id") == "test-correlation-123"
     
     @pytest.mark.asyncio
     async def test_global_exception_handler_creates_logger(self, mock_app, mock_request, mock_settings):
@@ -324,34 +271,28 @@ class TestExceptionHandlers:
         handler = mock_app.exception_handlers[Exception]
         
         test_exception = Exception("Test exception")
-        mock_app.state.telemetry_service = MagicMock()
         mock_app.state.logger = None  # No logger
+        
+        mock_request.headers = {}
+        mock_request.method = "GET"
         
         with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.get_settings') as mock_get_settings:
             mock_get_settings.return_value = mock_settings
             
             with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseLogger') as mock_base_logger:
                 with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.LoggerConfig') as mock_logger_config:
-                    with patch('src.openapi_plugin_example_py.api.extensions.exception_handlers.BaseExceptionHandler') as mock_exception_handler:
-                        mock_handler_instance = MagicMock()
-                        mock_exception_handler.return_value = mock_handler_instance
-                        
-                        mock_problem = MagicMock()
-                        mock_problem.status = 500
-                        mock_problem.model_dump.return_value = {"status": 500}
-                        mock_handler_instance.handle_exception.return_value = mock_problem
-                        
-                        mock_request.headers = {}
-                        mock_request.method = "GET"
-                        
-                        # Act
-                        response = await handler(mock_request, test_exception)
-                        
-                        # Assert
-                        assert response.status_code == 500
-                        # Verify logger was created
-                        mock_logger_config.assert_called_once_with(name="exception_handler")
-                        mock_base_logger.assert_called_once_with(
-                            mock_logger_config.return_value,
-                            mock_app.state.telemetry_service
-                        )
+                    mock_logger_instance = MagicMock()
+                    mock_base_logger.return_value = mock_logger_instance
+                    
+                    # Act
+                    response = await handler(mock_request, test_exception)
+                    
+                    # Assert
+                    assert response.status_code == 500
+                    # Verify logger was created
+                    mock_logger_config.assert_called_once_with(name="exception_handler")
+                    mock_base_logger.assert_called_once_with(
+                        mock_logger_config.return_value,
+                        None  # No telemetry service parameter in the implementation
+                    )
+                    mock_logger_instance.error.assert_called_once()

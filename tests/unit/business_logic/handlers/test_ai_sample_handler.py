@@ -119,9 +119,12 @@ class TestAISampleHandler:
         assert call_args[0][0] == AISampleCommand
         context = call_args[0][1]
         assert isinstance(context, AISampleCommandContext)
-        assert context.sample_prompt == "Generate a test response"
-        assert context.use_ai is True
-        assert context.validate_schema is True
+        assert context.messages == [
+            {"role": "system", "content": "You are a helpful assistant.", "name": None},
+            {"role": "user", "content": "Generate a test response", "name": None}
+        ]
+        assert context.temperature is None
+        assert context.max_tokens is None
 
     @pytest.mark.asyncio
     async def test_handle_async_with_custom_temperature(
@@ -149,8 +152,12 @@ class TestAISampleHandler:
             telemetry_service=mock_telemetry_service
         )
         
+        captured_context = None
+        
         # Mock result
         async def mock_execute_command(command_class, context):
+            nonlocal captured_context
+            captured_context = context
             context.metadata["result"] = AISampleCommandResult(
                 id="chatcmpl-test456",
                 model="gpt-4",
@@ -166,9 +173,9 @@ class TestAISampleHandler:
         # Act
         await handler.handle_async(request)
 
-        # Assert
-        assert plugin_options.openai.temperature == 0.9
-        assert plugin_options.openai.max_tokens == 500
+        # Assert - context should have the temperature and max_tokens
+        assert captured_context.temperature == 0.9
+        assert captured_context.max_tokens == 500
 
     @pytest.mark.asyncio
     async def test_handle_async_without_ai(
@@ -307,9 +314,9 @@ class TestAISampleHandler:
             chat_id="test-chat-123",
             agent_id="test-agent",
             agent_version="1.0.0",
-            sample_prompt="Test",
-            use_ai=True,
-            validate_schema=True,
+            messages=[
+                {"role": "user", "content": "Test"}
+            ],
             temperature=0.8,  # Should not cause error
             max_tokens=200
         )
@@ -392,10 +399,8 @@ class TestAISampleHandler:
         assert captured_context.chat_id == "unique-chat"
         assert captured_context.agent_id == "unique-agent"
         assert captured_context.agent_version == "2.5.0"
-        assert captured_context.sample_prompt == "Unique prompt for testing"
-        assert captured_context.use_ai is False
-        assert captured_context.validate_schema is False
-        
-        # Also verify options were updated
-        assert plugin_options.openai.temperature == 0.5
-        assert plugin_options.openai.max_tokens == 1500
+        assert captured_context.messages == [
+            {"role": "user", "content": "Unique prompt for testing", "name": None}
+        ]
+        assert captured_context.temperature == 0.5
+        assert captured_context.max_tokens == 1500
