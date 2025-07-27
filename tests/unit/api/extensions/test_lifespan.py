@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import FastAPI
 import logging
 
-from src.openapi_plugin_example_py.api.extensions.lifespan import lifespan
+from src.openapi_plugin_example_py.api.extensions.app_lifespan import ExamplePluginLifespanManager
 
 
 class TestLifespan:

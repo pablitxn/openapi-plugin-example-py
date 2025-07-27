@@ -3,7 +3,7 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from openapi_plugin_common import BaseExceptionHandler, BaseLogger, LoggerConfig
+from openapi_plugin_common import BaseLogger, LoggerConfig
 
 from src.openapi_plugin_example_py.config import get_settings
 
