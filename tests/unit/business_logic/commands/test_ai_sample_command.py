@@ -48,14 +48,15 @@ class TestAISampleCommand:
     @pytest.fixture
     def sample_context(self):
         """Create a sample command context."""
-        context = AISampleCommandContext()
-        context.chat_id = "test-chat-123"
-        context.agent_id = "test-agent"
-        context.agent_version = "1.0.0"
-        context.sample_prompt = "Test prompt for AI"
-        context.use_ai = True
-        context.validate_schema = True
-        context.metadata = {}
+        context = AISampleCommandContext(
+            sample_prompt="Test prompt for AI",
+            chat_id="test-chat-123",
+            agent_id="test-agent",
+            agent_version="1.0.0",
+            use_ai=True,
+            validate_schema=True,
+            metadata={}
+        )
         return context
 
     @pytest.mark.asyncio
@@ -173,7 +174,7 @@ class TestAISampleCommand:
         )
 
         # Act & Assert
-        with pytest.raises(ValidationException, match="AI response missing 'content' field"):
+        with pytest.raises(CommandException, match="AI processing failed: AI response missing 'content' field"):
             await command._process_with_ai(sample_context)
 
     @pytest.mark.asyncio

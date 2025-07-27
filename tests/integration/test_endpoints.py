@@ -4,6 +4,7 @@ import asyncio
 import base64
 import json
 import httpx
+import pytest
 from pathlib import Path
 
 
@@ -19,6 +20,7 @@ headers = {
 }
 
 
+@pytest.mark.asyncio
 async def test_health():
     """Test health endpoint."""
     print("\n=== Testing Health Endpoint ===")
@@ -29,6 +31,7 @@ async def test_health():
         return response.status_code == 200
 
 
+@pytest.mark.asyncio
 async def test_sample():
     """Test sample endpoint."""
     print("\n=== Testing Sample Endpoint ===")
@@ -47,6 +50,7 @@ async def test_sample():
         return response.status_code == 200
 
 
+@pytest.mark.asyncio
 async def test_ai_sample():
     """Test AI sample endpoint."""
     print("\n=== Testing AI Sample Endpoint ===")
@@ -67,6 +71,7 @@ async def test_ai_sample():
         return response.status_code == 200
 
 
+@pytest.mark.asyncio
 async def test_blob_sample():
     """Test blob sample endpoint."""
     print("\n=== Testing Blob Sample Endpoint ===")
@@ -95,6 +100,7 @@ async def test_blob_sample():
         return response.status_code == 200
 
 
+@pytest.mark.asyncio
 async def test_create_plot():
     """Test create plot endpoint."""
     print("\n=== Testing Create Plot Endpoint ===")

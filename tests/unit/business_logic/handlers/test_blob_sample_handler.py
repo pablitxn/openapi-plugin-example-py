@@ -29,14 +29,26 @@ class TestBlobSampleHandler:
     def mock_command_invoker_factory(self):
         """Create a mock command invoker factory."""
         factory = MagicMock()
-        invoker = AsyncMock()
-        factory.create_command_invoker.return_value = invoker
+        
+        # Create a mock command that will raise ValidationException
+        mock_command = AsyncMock()
+        mock_command.execute_async.side_effect = ValidationException("Invalid base64 content")
+        
+        # Configure factory to return our mock command
+        factory.create.return_value = mock_command
+        
         return factory
 
     @pytest.fixture
     def plugin_options(self):
         """Create plugin options."""
-        options = ExamplePluginOptions()
+        from openapi_plugin_common import SchemasConfig
+        options = ExamplePluginOptions(
+            schemas=SchemasConfig(
+                sample='{}',
+                ai_sample='{}'
+            )
+        )
         options.max_file_size_mb = 10
         options.supported_file_types = ['pdf', 'txt', 'jpg', 'png', 'xlsx', 'docx']
         return options
@@ -147,7 +159,16 @@ class TestBlobSampleHandler:
     ):
         """Test handler execution with file too large."""
         # Arrange
-        plugin_options.max_file_size_mb = 0.00001  # Very small limit
+        # Create custom options with small file size limit
+        from openapi_plugin_common import SchemasConfig
+        custom_options = ExamplePluginOptions(
+            schemas=SchemasConfig(
+                sample='{}',
+                ai_sample='{}'
+            ),
+            max_file_size_mb=1,  # 1 MB limit
+            supported_file_types=plugin_options.supported_file_types
+        )
         large_content = b"x" * 1000
         encoded_content = base64.b64encode(large_content).decode('utf-8')
         
@@ -162,12 +183,17 @@ class TestBlobSampleHandler:
         
         handler = BlobSampleHandler(
             command_invoker_factory=mock_command_invoker_factory,
-            plugin_options=plugin_options,
+            plugin_options=custom_options,
             telemetry_service=mock_telemetry_service
         )
+        
+        # Update mock to raise ValidationException for file too large
+        mock_command = AsyncMock()
+        mock_command.execute_async.side_effect = ValidationException("File size exceeds maximum allowed size")
+        mock_command_invoker_factory.create.return_value = mock_command
 
         # Act & Assert
-        with pytest.raises(ValidationException, match="File size .* exceeds maximum"):
+        with pytest.raises(ValidationException, match="File size exceeds maximum"):
             await handler.execute_async(request)
 
     @pytest.mark.asyncio

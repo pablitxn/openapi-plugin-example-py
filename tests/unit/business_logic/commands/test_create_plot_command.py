@@ -42,18 +42,19 @@ class TestCreatePlotCommand:
     @pytest.fixture
     def sample_context(self):
         """Create a sample command context."""
-        context = CreatePlotCommandContext()
-        context.chat_id = "test-chat-123"
-        context.agent_id = "test-agent"
-        context.agent_version = "1.0.0"
-        context.excel_url = "https://storage.azure.com/data/test.xlsx"
-        context.plot_type = "bar"
-        context.x_column = "Month"
-        context.y_column = "Sales"
-        context.title = "Test Plot"
-        context.sheet_name = None
-        context.figure_size = (10, 6)
-        context.metadata = {}
+        context = CreatePlotCommandContext(
+            excel_url="https://storage.azure.com/data/test.xlsx",
+            plot_type="bar",
+            x_column="Month",
+            y_column="Sales",
+            chat_id="test-chat-123",
+            agent_id="test-agent",
+            agent_version="1.0.0",
+            title="Test Plot",
+            sheet_name=None,
+            figure_size=(10, 6),
+            metadata={}
+        )
         return context
 
     @pytest.fixture
@@ -294,8 +295,10 @@ class TestCreatePlotCommand:
         plot_buffer = io.BytesIO(b"fake png data")
 
         # Act
-        with patch('uuid.uuid4', return_value=MagicMock(hex='12345678')):
-            with patch('datetime.datetime') as mock_datetime:
+        mock_uuid = MagicMock()
+        mock_uuid.__str__ = MagicMock(return_value='12345678-1234-1234-1234-123456789012')
+        with patch('uuid.uuid4', return_value=mock_uuid):
+            with patch('src.openapi_plugin_example_py.business_logic.commands.create_plot_command.datetime') as mock_datetime:
                 mock_datetime.utcnow.return_value.strftime.return_value = '20240101_120000'
                 plot_url, file_name = await command._upload_plot(
                     plot_buffer, "test-chat", "bar"

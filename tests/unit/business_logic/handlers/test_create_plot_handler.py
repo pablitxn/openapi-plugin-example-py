@@ -35,7 +35,13 @@ class TestCreatePlotHandler:
     @pytest.fixture
     def plugin_options(self):
         """Create plugin options."""
-        return ExamplePluginOptions()
+        from openapi_plugin_common import SchemasConfig
+        return ExamplePluginOptions(
+            schemas=SchemasConfig(
+                sample='{}',
+                ai_sample='{}'
+            )
+        )
 
     @pytest.fixture
     def mock_telemetry_service(self):

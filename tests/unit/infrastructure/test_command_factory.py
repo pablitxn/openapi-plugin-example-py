@@ -102,7 +102,8 @@ class TestCustomCommandInvokerFactory:
         """Test creating unknown command falls back to parent."""
         # Arrange
         class UnknownCommand(CommandBase):
-            pass
+            async def execute_command_async(self, context):
+                return "executed"
 
         # Act
         with patch('builtins.print'):  # Suppress debug prints

@@ -39,14 +39,15 @@ class TestBlobSampleCommand:
     @pytest.fixture
     def sample_context(self):
         """Create a sample command context."""
-        context = BlobSampleCommandContext()
-        context.chat_id = "test-chat-123"
-        context.agent_id = "test-agent"
-        context.agent_version = "1.0.0"
-        context.file_name = "test-document.pdf"
-        context.file_content = b"PDF content here"
-        context.container_name = None
-        context.metadata = {}
+        context = BlobSampleCommandContext(
+            file_name="test-document.pdf",
+            file_content=b"PDF content here",
+            chat_id="test-chat-123",
+            agent_id="test-agent",
+            agent_version="1.0.0",
+            container_name=None,
+            metadata={}
+        )
         return context
 
     @pytest.mark.asyncio
@@ -61,7 +62,9 @@ class TestBlobSampleCommand:
         )
 
         # Act
-        with patch('uuid.uuid4', return_value=MagicMock(hex='12345678')):
+        mock_uuid = MagicMock()
+        mock_uuid.__str__ = MagicMock(return_value='12345678-1234-1234-1234-123456789012')
+        with patch('uuid.uuid4', return_value=mock_uuid):
             with patch('datetime.datetime') as mock_datetime:
                 mock_datetime.utcnow.return_value.strftime.return_value = '20240101_120000'
                 await command.execute_command_async(sample_context)
@@ -126,7 +129,9 @@ class TestBlobSampleCommand:
         file_type = SupportedFileType.PDF
 
         # Act
-        with patch('uuid.uuid4', return_value=MagicMock(hex='12345678')):
+        mock_uuid = MagicMock()
+        mock_uuid.__str__ = MagicMock(return_value='12345678-1234-1234-1234-123456789012')
+        with patch('uuid.uuid4', return_value=mock_uuid):
             with patch('datetime.datetime') as mock_datetime:
                 mock_datetime.utcnow.return_value.strftime.return_value = '20240101_120000'
                 result = await command._upload_blob(sample_context, file_type)

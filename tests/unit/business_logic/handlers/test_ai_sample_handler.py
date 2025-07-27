@@ -34,7 +34,14 @@ class TestAISampleHandler:
     @pytest.fixture
     def plugin_options(self):
         """Create plugin options with OpenAI settings."""
-        options = ExamplePluginOptions()
+        from openapi_plugin_common import SchemasConfig
+        
+        options = ExamplePluginOptions(
+            schemas=SchemasConfig(
+                sample='{}',
+                ai_sample='{}'
+            )
+        )
         options.openai = OpenAIConfig(api_key="test-key")
         options.openai.temperature = 0.7
         options.openai.max_tokens = 1000
@@ -262,7 +269,13 @@ class TestAISampleHandler:
     ):
         """Test handler execution without OpenAI options."""
         # Arrange
-        options = ExamplePluginOptions()
+        from openapi_plugin_common import SchemasConfig
+        options = ExamplePluginOptions(
+            schemas=SchemasConfig(
+                sample='{}',
+                ai_sample='{}'
+            )
+        )
         options.openai = None  # No OpenAI options
         
         request = AISampleRequest(

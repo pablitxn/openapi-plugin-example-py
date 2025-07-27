@@ -35,7 +35,10 @@ class TestAppSettings:
         """Test AppSettings with plugin options as dictionary."""
         # Arrange
         plugin_options_dict = {
-            "schemas": {},  # Required field
+            "schemas": {
+                "sample": "{}",
+                "ai_sample": "{}"
+            },  # Required field
             "max_file_size_mb": 20,
             "supported_file_types": ["pdf", "docx"],
             "enable_caching": False
@@ -54,7 +57,10 @@ class TestAppSettings:
         """Test AppSettings with plugin options as JSON string."""
         # Arrange
         plugin_options_json = json.dumps({
-            "schemas": {},  # Required field
+            "schemas": {
+                "sample": "{}",
+                "ai_sample": "{}"
+            },  # Required field
             "max_file_size_mb": 15,
             "supported_file_types": ["txt", "csv"],
             "enable_caching": True
@@ -73,7 +79,10 @@ class TestAppSettings:
         """Test AppSettings with plugin options as ExamplePluginOptions object."""
         # Arrange
         plugin_options = ExamplePluginOptions(
-            schemas=SchemasConfig(),  # Required field
+            schemas=SchemasConfig(
+                sample='{}',
+                ai_sample='{}'
+            ),  # Required field
             max_file_size_mb=25,
             supported_file_types=["jpg", "png"],
             enable_caching=False
@@ -91,8 +100,9 @@ class TestAppSettings:
         # Arrange
         invalid_json = "{ invalid json"
 
-        # Act & Assert
-        with pytest.raises(json.JSONDecodeError):
+        # Act & Assert  
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
             AppSettings(plugin_options=invalid_json)
 
     def test_inheritance_from_base_app_settings(self):
@@ -130,7 +140,10 @@ class TestGetSettings:
         mock_settings = AppSettings(
             api_prefix="/env/api",
             plugin_options=ExamplePluginOptions(
-                schemas=SchemasConfig(),  # Required field
+                schemas=SchemasConfig(
+                    sample='{}',
+                    ai_sample='{}'
+                ),  # Required field
                 max_file_size_mb=30
             )
         )
