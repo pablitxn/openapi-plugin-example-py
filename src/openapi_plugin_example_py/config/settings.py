@@ -21,6 +21,10 @@ class SecuritySettings(BaseSettings):
         description="Azure AD tenant ID"
     )
     api_audience: str = Field(..., description="API audience for JWT validation")
+    client_secret: Optional[str] = Field(
+        default=None,
+        description="Client secret for authentication"
+    )
     geney_client_id: Optional[str] = Field(
         default=None,
         description="GenEY client ID for API access"
@@ -62,6 +66,10 @@ class AppSettings(BaseSettings):
         description="Azure AD tenant ID"
     )
     security_api_audience: str = Field(..., description="API audience for JWT validation")
+    security_client_secret: Optional[str] = Field(
+        default=None,
+        description="Client secret for authentication"
+    )
     security_geney_client_id: Optional[str] = Field(
         default=None,
         description="GenEY client ID for API access"
@@ -78,6 +86,7 @@ class AppSettings(BaseSettings):
             client_id=self.security_client_id,
             tenant_id=self.security_tenant_id,
             api_audience=self.security_api_audience,
+            client_secret=self.security_client_secret,
             geney_client_id=self.security_geney_client_id,
             geney_api_domain=self.security_geney_api_domain
         )
