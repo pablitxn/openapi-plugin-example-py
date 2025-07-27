@@ -3,18 +3,15 @@ import base64
 import time
 from typing import Optional
 
-from openapi_plugin_common import (
-    CommandInvoker,
-    RequestHandlerBase,
-    ValidationException,
-)
+from openapi_plugin_common import ValidationException
 
+from .base_plugin_handler import BasePluginHandler
 from ..commands import BlobSampleCommand, BlobSampleCommandContext
 from ..options import ExamplePluginOptions
 from ..requests import BlobSampleRequest, BlobSampleResponse
 
 
-class BlobSampleHandler(RequestHandlerBase[BlobSampleRequest, BlobSampleResponse]):
+class BlobSampleHandler(BasePluginHandler[BlobSampleRequest, BlobSampleResponse]):
     """Handler for blob sample requests."""
     
     def __init__(
@@ -24,9 +21,7 @@ class BlobSampleHandler(RequestHandlerBase[BlobSampleRequest, BlobSampleResponse
         telemetry_service: Optional[object] = None
     ) -> None:
         """Initialize the handler."""
-        super().__init__(telemetry_service)
-        self._command_invoker_factory = command_invoker_factory
-        self._plugin_options = plugin_options
+        super().__init__(command_invoker_factory, plugin_options, telemetry_service)
     
     async def execute_async(self, request: BlobSampleRequest) -> BlobSampleResponse:
         """Execute the blob sample request."""
@@ -68,9 +63,8 @@ class BlobSampleHandler(RequestHandlerBase[BlobSampleRequest, BlobSampleResponse
         if request.metadata:
             context.metadata.update(request.metadata)
         
-        # Create and execute command
-        command_invoker = self._command_invoker_factory.create(BlobSampleCommand)
-        await command_invoker.invoke_async(context, self._plugin_options)
+        # Execute command
+        await self.execute_command_async(BlobSampleCommand, context)
         
         # Get result from context metadata
         result = context.metadata.get("result")

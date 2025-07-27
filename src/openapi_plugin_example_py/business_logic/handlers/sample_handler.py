@@ -2,14 +2,14 @@
 import time
 from typing import Optional
 
-from openapi_plugin_common import CommandInvoker, RequestHandlerBase
+from .base_plugin_handler import BasePluginHandler
 
 from ..commands import SampleCommand, SampleCommandContext
 from ..options import ExamplePluginOptions
 from ..requests import SampleRequest, SampleResponse
 
 
-class SampleHandler(RequestHandlerBase[SampleRequest, SampleResponse]):
+class SampleHandler(BasePluginHandler[SampleRequest, SampleResponse]):
     """Handler for sample requests."""
     
     def __init__(
@@ -19,9 +19,7 @@ class SampleHandler(RequestHandlerBase[SampleRequest, SampleResponse]):
         telemetry_service: Optional[object] = None
     ) -> None:
         """Initialize the handler."""
-        super().__init__(telemetry_service)
-        self._command_invoker_factory = command_invoker_factory
-        self._plugin_options = plugin_options
+        super().__init__(command_invoker_factory, plugin_options, telemetry_service)
     
     async def execute_async(self, request: SampleRequest) -> SampleResponse:
         """Execute the sample request."""
@@ -36,9 +34,8 @@ class SampleHandler(RequestHandlerBase[SampleRequest, SampleResponse]):
             use_cache=request.use_cache
         )
         
-        # Create and execute command
-        command_invoker = self._command_invoker_factory.create(SampleCommand)
-        await command_invoker.invoke_async(context, self._plugin_options)
+        # Execute command
+        await self.execute_command_async(SampleCommand, context)
         
         # Get result from context metadata
         result = context.metadata.get("result")

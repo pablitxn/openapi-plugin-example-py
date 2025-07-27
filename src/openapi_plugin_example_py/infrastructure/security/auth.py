@@ -46,4 +46,4 @@ def requires_auth(f):
 
 
 # Re-export common security utilities
-from openapi_plugin_common import requires_scope  # noqa: E402
+from openapi_plugin_common import requires_scope, AuthError  # noqa: E402

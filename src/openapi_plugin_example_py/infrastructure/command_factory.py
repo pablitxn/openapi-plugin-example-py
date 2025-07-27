@@ -30,6 +30,9 @@ class CustomCommandInvokerFactory(CommandInvokerFactory):
     def create(self, command_type: Type[CommandBase]) -> CommandBase:
         """Create command with appropriate services injected."""
         # Create base command with telemetry
+        print(f"Creating command: {command_type}")
+        print(f"Blob service available: {self._blob_service is not None}")
+        
         if command_type == SampleCommand:
             return SampleCommand(
                 telemetry_service=self._telemetry_service,

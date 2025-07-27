@@ -2,18 +2,15 @@
 import time
 from typing import Optional
 
-from openapi_plugin_common import (
-    CommandInvoker,
-    RequestHandlerBase,
-    ValidationException,
-)
+from openapi_plugin_common import ValidationException
 
+from .base_plugin_handler import BasePluginHandler
 from ..commands import CreatePlotCommand, CreatePlotCommandContext
 from ..options import ExamplePluginOptions
 from ..requests import CreatePlotRequest, CreatePlotResponse
 
 
-class CreatePlotHandler(RequestHandlerBase[CreatePlotRequest, CreatePlotResponse]):
+class CreatePlotHandler(BasePluginHandler[CreatePlotRequest, CreatePlotResponse]):
     """Handler for create plot requests."""
     
     def __init__(
@@ -23,9 +20,7 @@ class CreatePlotHandler(RequestHandlerBase[CreatePlotRequest, CreatePlotResponse
         telemetry_service: Optional[object] = None
     ) -> None:
         """Initialize the handler."""
-        super().__init__(telemetry_service)
-        self._command_invoker_factory = command_invoker_factory
-        self._plugin_options = plugin_options
+        super().__init__(command_invoker_factory, plugin_options, telemetry_service)
     
     async def execute_async(self, request: CreatePlotRequest) -> CreatePlotResponse:
         """Execute the create plot request."""
@@ -52,9 +47,8 @@ class CreatePlotHandler(RequestHandlerBase[CreatePlotRequest, CreatePlotResponse
             figure_size=request.figure_size
         )
         
-        # Create and execute command
-        command_invoker = self._command_invoker_factory.create(CreatePlotCommand)
-        await command_invoker.invoke_async(context, self._plugin_options)
+        # Execute command
+        await self.execute_command_async(CreatePlotCommand, context)
         
         # Get result from context metadata
         result = context.metadata.get("result")

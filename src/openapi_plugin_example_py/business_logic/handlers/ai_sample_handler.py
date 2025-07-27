@@ -2,14 +2,13 @@
 import time
 from typing import Optional
 
-from openapi_plugin_common import CommandInvoker, RequestHandlerBase
-
+from .base_plugin_handler import BasePluginHandler
 from ..commands import AISampleCommand, AISampleCommandContext
 from ..options import ExamplePluginOptions
 from ..requests import AISampleRequest, AISampleResponse
 
 
-class AISampleHandler(RequestHandlerBase[AISampleRequest, AISampleResponse]):
+class AISampleHandler(BasePluginHandler[AISampleRequest, AISampleResponse]):
     """Handler for AI sample requests."""
     
     def __init__(
@@ -19,9 +18,7 @@ class AISampleHandler(RequestHandlerBase[AISampleRequest, AISampleResponse]):
         telemetry_service: Optional[object] = None
     ) -> None:
         """Initialize the handler."""
-        super().__init__(telemetry_service)
-        self._command_invoker_factory = command_invoker_factory
-        self._plugin_options = plugin_options
+        super().__init__(command_invoker_factory, plugin_options, telemetry_service)
     
     async def execute_async(self, request: AISampleRequest) -> AISampleResponse:
         """Execute the AI sample request."""
@@ -41,9 +38,8 @@ class AISampleHandler(RequestHandlerBase[AISampleRequest, AISampleResponse]):
             validate_schema=request.validate_schema
         )
         
-        # Create and execute command
-        command_invoker = self._command_invoker_factory.create(AISampleCommand)
-        await command_invoker.invoke_async(context, self._plugin_options)
+        # Execute command
+        await self.execute_command_async(AISampleCommand, context)
         
         # Get result from context metadata
         result = context.metadata.get("result")

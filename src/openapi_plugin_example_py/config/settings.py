@@ -49,6 +49,20 @@ class AppSettings(BaseSettings):
         description="Application environment"
     )
     
+    # Development/Testing bypass settings
+    bypass_auth: bool = Field(
+        default=False,
+        description="Bypass authentication for development"
+    )
+    use_filesystem_storage: bool = Field(
+        default=False,
+        description="Use filesystem instead of Azure Blob Storage"
+    )
+    filesystem_storage_path: str = Field(
+        default="./mock_storage",
+        description="Path for filesystem storage"
+    )
+    
     # API settings
     api_prefix: str = Field(
         default="/api/plugin/ExamplePlugin",
@@ -138,4 +152,41 @@ class AppSettings(BaseSettings):
 
 def get_settings() -> AppSettings:
     """Get application settings."""
+    import os
+    from .json_loader import load_json_config
+    
+    # Load configuration from JSON files
+    environment = os.getenv("ENVIRONMENT", "development")
+    json_config = load_json_config(environment.capitalize())
+    
+    # Set complex objects as JSON strings for pydantic-settings
+    if "plugin_options" in json_config:
+        os.environ["PLUGIN_OPTIONS"] = json.dumps(json_config["plugin_options"])
+    
+    # Set other simple values
+    for key in ["environment", "api_prefix", "api_version", "bypass_auth", "use_filesystem_storage", "filesystem_storage_path"]:
+        if key in json_config:
+            os.environ[key.upper()] = str(json_config[key])
+    
+    # Set security values
+    if "security" in json_config:
+        for k, v in json_config["security"].items():
+            os.environ[f"SECURITY_{k.upper()}"] = str(v)
+    
+    # Set telemetry
+    if "telemetry" in json_config:
+        os.environ["TELEMETRY"] = json.dumps(json_config["telemetry"])
+    
+    # Set blob storage
+    if "blob_storage" in json_config:
+        os.environ["BLOB_STORAGE"] = json.dumps(json_config["blob_storage"])
+    
+    # Set redis url
+    if "redis_url" in json_config:
+        os.environ["REDIS_URL"] = json_config["redis_url"]
+    
+    # Set CORS origins
+    if "cors_origins" in json_config:
+        os.environ["CORS_ORIGINS"] = json.dumps(json_config["cors_origins"])
+    
     return AppSettings()

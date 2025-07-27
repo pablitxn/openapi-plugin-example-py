@@ -8,7 +8,6 @@ packages = [{include = "openapi_plugin_example_py", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-openapi-plugin-common-py = {path = "/home/pablitxn/repos/openapi-plugin-common-py"}
 pandas = "^2.0.0"
 matplotlib = "^3.7.0"
 openpyxl = "^3.1.0"
@@ -16,3 +15,5 @@ redis = {version = "^5.0.0", extras = ["async"]}
 fastapi = "^0.116.0"
 uvicorn = "^0.24.0"
 openai = "^1.0.0"
+msal = "^1.33.0"
+openapi-plugin-common-py = {path = "/home/pablitxn/repos/openapi-plugin-common-py", develop = true}

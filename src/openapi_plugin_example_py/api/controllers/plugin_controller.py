@@ -10,6 +10,12 @@ from ...business_logic.handlers import (
     CreatePlotHandler,
     SampleHandler,
 )
+from ..extensions.dependency_injection import (
+    get_sample_handler,
+    get_ai_sample_handler,
+    get_blob_sample_handler,
+    get_create_plot_handler,
+)
 from ...business_logic.requests import (
     AISampleRequest,
     AISampleResponse,
@@ -42,7 +48,7 @@ async def sample(
     chat_id: Annotated[str, Header(alias=HttpHeaders.CHAT_ID)] = "",
     agent_id: Annotated[str, Header(alias=HttpHeaders.AGENT_ID)] = "",
     agent_version: Annotated[str, Header(alias=HttpHeaders.AGENT_VERSION)] = "",
-    sample_handler: SampleHandler = Depends()
+    sample_handler: SampleHandler = Depends(get_sample_handler)
 ) -> SampleResponse:
     """Process a sample request."""
     # Create request
@@ -69,7 +75,7 @@ async def ai_sample(
     chat_id: Annotated[str, Header(alias=HttpHeaders.CHAT_ID)] = "",
     agent_id: Annotated[str, Header(alias=HttpHeaders.AGENT_ID)] = "",
     agent_version: Annotated[str, Header(alias=HttpHeaders.AGENT_VERSION)] = "",
-    ai_sample_handler: AISampleHandler = Depends()
+    ai_sample_handler: AISampleHandler = Depends(get_ai_sample_handler)
 ) -> AISampleResponse:
     """Process an AI sample request."""
     # Update headers from request
@@ -92,7 +98,7 @@ async def blob_sample(
     chat_id: Annotated[str, Header(alias=HttpHeaders.CHAT_ID)] = "",
     agent_id: Annotated[str, Header(alias=HttpHeaders.AGENT_ID)] = "",
     agent_version: Annotated[str, Header(alias=HttpHeaders.AGENT_VERSION)] = "",
-    blob_sample_handler: BlobSampleHandler = Depends()
+    blob_sample_handler: BlobSampleHandler = Depends(get_blob_sample_handler)
 ) -> BlobSampleResponse:
     """Upload a file to blob storage."""
     # Update headers from request
@@ -115,7 +121,7 @@ async def create_plot(
     chat_id: Annotated[str, Header(alias=HttpHeaders.CHAT_ID)] = "",
     agent_id: Annotated[str, Header(alias=HttpHeaders.AGENT_ID)] = "",
     agent_version: Annotated[str, Header(alias=HttpHeaders.AGENT_VERSION)] = "",
-    create_plot_handler: CreatePlotHandler = Depends()
+    create_plot_handler: CreatePlotHandler = Depends(get_create_plot_handler)
 ) -> CreatePlotResponse:
     """Create a plot from Excel data."""
     # Update headers from request
