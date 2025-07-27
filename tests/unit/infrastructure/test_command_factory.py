@@ -149,7 +149,9 @@ class TestCustomCommandInvokerFactory:
         from openapi_plugin_common.log_events import LoggedCommandWrapper
         assert isinstance(sample_command, LoggedCommandWrapper)
         assert isinstance(sample_command.command, SampleCommand)
-        assert sample_command.command._telemetry_service is None
+        # When telemetry_service is None, CommandBase initializes with NoOpTelemetry
+        from openapi_plugin_common.telemetry import NoOpTelemetry
+        assert isinstance(sample_command.command._telemetry_service, NoOpTelemetry)
         assert sample_command.command._cache_service is None
 
         assert isinstance(blob_command, LoggedCommandWrapper)

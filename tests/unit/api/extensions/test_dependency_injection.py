@@ -191,15 +191,19 @@ class TestDependencyInjection:
         mock_request.app.state.settings.plugin_options.openai = mock_openai_config
         mock_request.app.state.telemetry_service = MagicMock()
         
-        # Act
-        result = await get_llm_provider(mock_request)
-        
-        # Assert
-        assert result is None
-        # Verify warning was logged
-        mock_request.app.state.telemetry_service.log_warning.assert_called_once_with(
-            "Using deprecated OpenAI configuration. Please migrate to Azure OpenAI."
-        )
+        with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.create_llm_provider') as mock_create:
+            mock_provider = MagicMock()
+            mock_create.return_value = mock_provider
+            
+            # Act
+            result = await get_llm_provider(mock_request)
+            
+            # Assert
+            assert result == mock_provider
+            mock_create.assert_called_once_with(
+                config=mock_openai_config,
+                telemetry_service=mock_request.app.state.telemetry_service
+            )
 
     @pytest.mark.asyncio
     async def test_get_geney_client_configured(self, mock_request):

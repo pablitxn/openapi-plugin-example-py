@@ -60,9 +60,10 @@ class TestAISampleHandler:
             chat_id="test-chat-123",
             agent_id="test-agent",
             agent_version="1.0.0",
-            sample_prompt="Generate a test response",
-            use_ai=True,
-            validate_schema=True,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Generate a test response"}
+            ],
             temperature=None,
             max_tokens=None
         )
@@ -86,9 +87,13 @@ class TestAISampleHandler:
         # Mock the execute_command_async to populate context metadata
         async def mock_execute_command(command_class, context):
             context.metadata["result"] = AISampleCommandResult(
-                ai_response="Generated AI response",
-                model_used="gpt-4",
-                tokens_used=150
+                id="chatcmpl-test123",
+                model="gpt-4",
+                content="Generated AI response",
+                finish_reason="stop",
+                prompt_tokens=50,
+                completion_tokens=100,
+                total_tokens=150
             )
             context.metadata["cached"] = False
         
@@ -99,9 +104,13 @@ class TestAISampleHandler:
 
         # Assert
         assert isinstance(response, AISampleResponse)
-        assert response.ai_response == "Generated AI response"
-        assert response.model_used == "gpt-4"
-        assert response.tokens_used == 150
+        assert response.id.startswith("chatcmpl-")
+        assert response.object == "chat.completion"
+        assert response.model == "gpt-4"
+        assert len(response.choices) == 1
+        assert response.choices[0].message.content == "Generated AI response"
+        assert response.choices[0].message.role == "assistant"
+        assert response.usage.total_tokens == 150
         assert response.cached is False
 
         # Verify command execution
@@ -127,9 +136,9 @@ class TestAISampleHandler:
             chat_id="test-chat-123",
             agent_id="test-agent",
             agent_version="1.0.0",
-            sample_prompt="Test prompt",
-            use_ai=True,
-            validate_schema=True,
+            messages=[
+                {"role": "user", "content": "Test prompt"}
+            ],
             temperature=0.9,
             max_tokens=500
         )
@@ -143,9 +152,13 @@ class TestAISampleHandler:
         # Mock result
         async def mock_execute_command(command_class, context):
             context.metadata["result"] = AISampleCommandResult(
-                ai_response="Response",
-                model_used="gpt-4",
-                tokens_used=100
+                id="chatcmpl-test456",
+                model="gpt-4",
+                content="Response",
+                finish_reason="stop",
+                prompt_tokens=20,
+                completion_tokens=80,
+                total_tokens=100
             )
         
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
@@ -170,9 +183,9 @@ class TestAISampleHandler:
             chat_id="test-chat-123",
             agent_id="test-agent",
             agent_version="1.0.0",
-            sample_prompt="Test prompt",
-            use_ai=False,
-            validate_schema=False
+            messages=[
+                {"role": "user", "content": "Test prompt"}
+            ]
         )
         
         handler = AISampleHandler(
@@ -184,9 +197,13 @@ class TestAISampleHandler:
         # Mock fallback result
         async def mock_execute_command(command_class, context):
             context.metadata["result"] = AISampleCommandResult(
-                ai_response="Fallback response",
-                model_used="fallback",
-                tokens_used=0
+                id="chatcmpl-fallback",
+                model="fallback",
+                content="Fallback response",
+                finish_reason="stop",
+                prompt_tokens=0,
+                completion_tokens=0,
+                total_tokens=0
             )
         
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
@@ -195,9 +212,11 @@ class TestAISampleHandler:
         response = await handler.handle_async(request)
 
         # Assert
-        assert response.ai_response == "Fallback response"
-        assert response.model_used == "fallback"
-        assert response.tokens_used == 0
+        assert response.id.startswith("chatcmpl-")
+        assert response.model == "fallback"
+        assert len(response.choices) == 1
+        assert response.choices[0].message.content == "Fallback response"
+        assert response.usage.total_tokens == 0
 
     @pytest.mark.asyncio
     async def test_handle_async_cached_result(
@@ -218,9 +237,13 @@ class TestAISampleHandler:
         # Mock cached result
         async def mock_execute_command(command_class, context):
             context.metadata["result"] = AISampleCommandResult(
-                ai_response="Cached AI response",
-                model_used="gpt-3.5",
-                tokens_used=80
+                id="chatcmpl-cached",
+                model="gpt-3.5",
+                content="Cached AI response",
+                finish_reason="stop",
+                prompt_tokens=30,
+                completion_tokens=50,
+                total_tokens=80
             )
             context.metadata["cached"] = True
         
@@ -230,7 +253,9 @@ class TestAISampleHandler:
         response = await handler.handle_async(sample_request)
 
         # Assert
-        assert response.ai_response == "Cached AI response"
+        assert response.id.startswith("chatcmpl-")
+        assert len(response.choices) == 1
+        assert response.choices[0].message.content == "Cached AI response"
         assert response.cached is True
 
     @pytest.mark.asyncio
@@ -298,9 +323,13 @@ class TestAISampleHandler:
         # Mock result
         async def mock_execute_command(command_class, context):
             context.metadata["result"] = AISampleCommandResult(
-                ai_response="Response",
-                model_used="gpt-4",
-                tokens_used=50
+                id="chatcmpl-test789",
+                model="gpt-4",
+                content="Response",
+                finish_reason="stop",
+                prompt_tokens=20,
+                completion_tokens=30,
+                total_tokens=50
             )
         
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
@@ -309,7 +338,8 @@ class TestAISampleHandler:
         response = await handler.handle_async(request)
 
         # Assert
-        assert response.ai_response == "Response"
+        assert len(response.choices) == 1
+        assert response.choices[0].message.content == "Response"
 
     @pytest.mark.asyncio
     async def test_handle_async_context_creation_details(
@@ -324,9 +354,9 @@ class TestAISampleHandler:
             chat_id="unique-chat",
             agent_id="unique-agent",
             agent_version="2.5.0",
-            sample_prompt="Unique prompt for testing",
-            use_ai=False,
-            validate_schema=False,
+            messages=[
+                {"role": "user", "content": "Unique prompt for testing"}
+            ],
             temperature=0.5,
             max_tokens=1500
         )
@@ -343,9 +373,13 @@ class TestAISampleHandler:
             nonlocal captured_context
             captured_context = context
             context.metadata["result"] = AISampleCommandResult(
-                ai_response="Test",
-                model_used="test",
-                tokens_used=10
+                id="chatcmpl-testcontext",
+                model="test",
+                content="Test",
+                finish_reason="stop",
+                prompt_tokens=5,
+                completion_tokens=5,
+                total_tokens=10
             )
         
         handler.execute_command_async = AsyncMock(side_effect=capture_context)

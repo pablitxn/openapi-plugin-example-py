@@ -112,17 +112,32 @@ class TestPluginController:
         """Test AI sample endpoint with successful response."""
         # Arrange
         mock_response = AISampleResponse(
-            ai_response="Generated AI response",
-            model_used="gpt-4",
-            tokens_used=150,
+            id="chatcmpl-123",
+            object="chat.completion",
+            created=1677652288,
+            model="gpt-4",
+            choices=[{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "Generated AI response"
+                },
+                "finish_reason": "stop"
+            }],
+            usage={
+                "prompt_tokens": 25,
+                "completion_tokens": 125,
+                "total_tokens": 150
+            },
             cached=False
         )
         mock_handlers['ai_sample_handler'].handle_async.return_value = mock_response
 
         request_body = {
-            "sample_prompt": "Generate something",
-            "use_ai": True,
-            "validate_schema": True
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Generate something"}
+            ]
         }
 
         # Act
@@ -139,14 +154,13 @@ class TestPluginController:
         # Assert
         assert response.status_code == 200
         data = response.json()
-        if "ai_response" in data:
-            assert data["ai_response"] == "Generated AI response"
-            assert data["model_used"] == "gpt-4"
-            assert data["tokens_used"] == 150
-        else:
-            assert data["aiResponse"] == "Generated AI response"
-            assert data["modelUsed"] == "gpt-4"
-            assert data["tokensUsed"] == 150
+        assert data["id"] == "chatcmpl-123"
+        assert data["object"] == "chat.completion"
+        assert data["model"] == "gpt-4"
+        assert len(data["choices"]) == 1
+        assert data["choices"][0]["message"]["content"] == "Generated AI response"
+        assert data["choices"][0]["message"]["role"] == "assistant"
+        assert data["usage"]["total_tokens"] == 150
         assert data["cached"] is False
 
     def test_blob_sample_endpoint_success(self, client, mock_handlers):
@@ -266,16 +280,31 @@ class TestPluginController:
         """Test that headers override request body values."""
         # Arrange
         mock_response = AISampleResponse(
-            ai_response="Response",
-            model_used="gpt-4",
-            tokens_used=50,
+            id="chatcmpl-456",
+            object="chat.completion",
+            created=1677652288,
+            model="gpt-4",
+            choices=[{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "Response"
+                },
+                "finish_reason": "stop"
+            }],
+            usage={
+                "prompt_tokens": 10,
+                "completion_tokens": 40,
+                "total_tokens": 50
+            },
             cached=False
         )
         mock_handlers['ai_sample_handler'].handle_async.return_value = mock_response
 
         request_body = {
-            "sample_prompt": "Test",
-            "use_ai": True,
+            "messages": [
+                {"role": "user", "content": "Test"}
+            ],
             "chat_id": "body-chat-id",
             "agent_id": "body-agent-id",
             "agent_version": "body-version"

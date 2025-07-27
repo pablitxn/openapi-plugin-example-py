@@ -47,10 +47,11 @@ def test_ai_sample(test_client):
     """Test AI sample endpoint."""
     print("\n=== Testing AI Sample Endpoint ===")
     
-    # First check if AI is available by testing with use_ai=False
+    # First check if AI is available by testing with a simple message
     data = {
-        "sample_prompt": "Test prompt",
-        "use_ai": False
+        "messages": [
+            {"role": "user", "content": "Test prompt"}
+        ]
     }
     response = test_client.post(
         f"{API_PREFIX}/ai-sample",
@@ -64,8 +65,10 @@ def test_ai_sample(test_client):
     
     # Now test with AI if available
     data = {
-        "sample_prompt": "Explain quantum computing in simple terms",
-        "use_ai": True,
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Explain quantum computing in simple terms"}
+        ],
         "temperature": 0.7,
         "max_tokens": 150
     }

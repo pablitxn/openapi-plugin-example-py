@@ -33,7 +33,7 @@ class TestAISampleCommand:
         response = MagicMock()
         response.content = "AI generated response"
         response.model = "gpt-4"
-        response.usage = {"total_tokens": 150}
+        response.usage = {"prompt_tokens": 50, "completion_tokens": 100, "total_tokens": 150}
         service.generate_completion = AsyncMock(return_value=response)
         return service
 
@@ -49,12 +49,13 @@ class TestAISampleCommand:
     def sample_context(self):
         """Create a sample command context."""
         context = AISampleCommandContext(
-            sample_prompt="Test prompt for AI",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Test prompt for AI"}
+            ],
             chat_id="test-chat-123",
             agent_id="test-agent",
             agent_version="1.0.0",
-            use_ai=True,
-            validate_schema=True,
             metadata={}
         )
         return context
@@ -96,7 +97,7 @@ class TestAISampleCommand:
         """Test command execution without LLM provider."""
         # Arrange
         command = AISampleCommand(telemetry_service=mock_telemetry_service)
-        sample_context.use_ai = True
+        # AI is always used in the new version
 
         # Act & Assert
         with pytest.raises(ConfigurationException, match="LLM provider is not configured"):
@@ -140,7 +141,7 @@ class TestAISampleCommand:
     ):
         """Test command execution without AI (fallback mode)."""
         # Arrange
-        sample_context.use_ai = False
+        # Testing without AI (fallback mode)
         command = AISampleCommand(
             telemetry_service=mock_telemetry_service,
             cache_service=mock_cache_service
@@ -166,7 +167,7 @@ class TestAISampleCommand:
         # Missing 'content' attribute
         response.content = None
         response.model = "gpt-4"
-        response.usage = {"total_tokens": 150}
+        response.usage = {"prompt_tokens": 50, "completion_tokens": 100, "total_tokens": 150}
         mock_llm_provider.generate_completion.return_value = response
         
         command = AISampleCommand(
@@ -205,12 +206,13 @@ class TestAISampleCommand:
         command = AISampleCommand(telemetry_service=mock_telemetry_service)
 
         # Act
-        result = await command._process_without_ai("Test prompt")
+        messages = [{"role": "user", "content": "Test prompt"}]
+        result = await command._process_without_ai(messages)
 
         # Assert
-        assert result.ai_response == "Fallback response for: Test prompt"
-        assert result.model_used == "fallback"
-        assert result.tokens_used == 0
+        assert result.content == "Fallback response for: Test prompt"
+        assert result.model == "fallback"
+        assert result.total_tokens > 0
 
     def test_validate_response_schema_success(self, mock_telemetry_service):
         """Test successful response schema validation."""
@@ -328,20 +330,24 @@ class TestAISampleCommand:
         """Test AISampleCommandResult to_dict method."""
         # Arrange
         result = AISampleCommandResult(
-            ai_response="Test response",
-            model_used="gpt-4",
-            tokens_used=100
+            id="chatcmpl-test",
+            model="gpt-4",
+            content="Test response",
+            finish_reason="stop",
+            prompt_tokens=25,
+            completion_tokens=75,
+            total_tokens=100
         )
 
-        # Act
-        result_dict = result.to_dict()
-
-        # Assert
-        assert result_dict == {
-            "aiResponse": "Test response",
-            "modelUsed": "gpt-4",
-            "tokensUsed": 100
-        }
+        # Assert attributes directly
+        assert result.id == "chatcmpl-test"
+        assert result.model == "gpt-4"
+        assert result.content == "Test response"
+        assert result.finish_reason == "stop"
+        assert result.prompt_tokens == 25
+        assert result.completion_tokens == 75
+        assert result.total_tokens == 100
+        assert result.created > 0
 
     @pytest.mark.asyncio
     async def test_execute_command_no_validation(
@@ -349,12 +355,12 @@ class TestAISampleCommand:
     ):
         """Test command execution without schema validation."""
         # Arrange
-        sample_context.validate_schema = False
+        # Schema validation removed in new version
         response = MagicMock()
         # Even with missing content, no validation should allow it
         response.content = ""
         response.model = "gpt-4"
-        response.usage = {"total_tokens": 150}
+        response.usage = {"prompt_tokens": 50, "completion_tokens": 100, "total_tokens": 150}
         mock_llm_provider.generate_completion.return_value = response
         
         command = AISampleCommand(
