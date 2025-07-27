@@ -1,4 +1,6 @@
 """Create plot command implementation."""
+from __future__ import annotations
+
 import io
 import uuid
 from datetime import datetime, timezone

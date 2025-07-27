@@ -1,4 +1,6 @@
 """Blob sample command implementation."""
+from __future__ import annotations
+
 from typing import Optional
 
 from openapi_plugin_common import (
