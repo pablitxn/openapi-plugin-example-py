@@ -1,5 +1,4 @@
 """Blob sample command implementation."""
-import json
 from typing import Optional
 
 from openapi_plugin_common import (

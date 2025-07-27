@@ -1,5 +1,4 @@
 """Create plot request models."""
-from enum import Enum
 from typing import Optional
 
 from openapi_plugin_common import RequestBase

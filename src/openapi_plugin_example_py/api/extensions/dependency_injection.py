@@ -51,23 +51,19 @@ async def get_llm_provider(request: Request):
     app = request.app
     settings = app.state.settings
     
-    # Prefer Azure OpenAI if configured
-    if settings.plugin_options.azure_openai:
+    # Prefer Azure OpenAI if configured with valid API key
+    if settings.plugin_options.azure_openai and settings.plugin_options.azure_openai.api_key:
         return create_llm_provider(
             config=settings.plugin_options.azure_openai,
             telemetry_service=app.state.telemetry_service
         )
     
-    # Fall back to legacy OpenAI config if available
-    elif settings.plugin_options.openai and settings.plugin_options.openai.api_key:
-        # Note: This is deprecated - should migrate to Azure OpenAI
-        if app.state.telemetry_service:
-            app.state.telemetry_service.log_warning(
-                "Using deprecated OpenAI configuration. Please migrate to Azure OpenAI."
-            )
-        # For backward compatibility, we would need to implement a direct OpenAI provider
-        # For now, we'll return None and let the application handle it
-        return None
+    # Fall back to regular OpenAI config if available
+    elif settings.plugin_options.openai and hasattr(settings.plugin_options.openai, 'api_key') and settings.plugin_options.openai.api_key:
+        return create_llm_provider(
+            config=settings.plugin_options.openai,
+            telemetry_service=app.state.telemetry_service
+        )
     
     return None
 
@@ -182,23 +178,19 @@ async def get_llm_provider_for_app(app: FastAPI):
     """Get LLM provider service for app initialization."""
     settings = app.state.settings
     
-    # Prefer Azure OpenAI if configured
-    if settings.plugin_options.azure_openai:
+    # Prefer Azure OpenAI if configured with valid API key
+    if settings.plugin_options.azure_openai and settings.plugin_options.azure_openai.api_key:
         return create_llm_provider(
             config=settings.plugin_options.azure_openai,
             telemetry_service=app.state.telemetry_service
         )
     
-    # Fall back to legacy OpenAI config if available
-    elif settings.plugin_options.openai and settings.plugin_options.openai.api_key:
-        # Note: This is deprecated - should migrate to Azure OpenAI
-        if app.state.telemetry_service:
-            app.state.telemetry_service.log_warning(
-                "Using deprecated OpenAI configuration. Please migrate to Azure OpenAI."
-            )
-        # For backward compatibility, we would need to implement a direct OpenAI provider
-        # For now, we'll return None and let the application handle it
-        return None
+    # Fall back to regular OpenAI config if available
+    elif settings.plugin_options.openai and hasattr(settings.plugin_options.openai, 'api_key') and settings.plugin_options.openai.api_key:
+        return create_llm_provider(
+            config=settings.plugin_options.openai,
+            telemetry_service=app.state.telemetry_service
+        )
     
     return None
 

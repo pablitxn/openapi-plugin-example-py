@@ -139,7 +139,6 @@ class CreatePlotCommand(CommandBase[CreatePlotCommandContext, ExamplePluginOptio
         if excel_url.startswith("file://"):
             # For filesystem storage, extract the blob name from the path
             # Example: file:///absolute/path/to/mock_storage/dev-uploads/test_sales_data.xlsx
-            import os
             file_path = excel_url.replace("file://", "")
             
             # Read the file directly

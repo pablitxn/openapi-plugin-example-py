@@ -5,7 +5,7 @@ from .base_plugin_handler import BasePluginHandler
 from openapi_plugin_common import BaseLogger
 from ..commands import AISampleCommand, AISampleCommandContext
 from ..options import ExamplePluginOptions
-from ..requests import AISampleRequest, AISampleResponse
+from ..requests import AISampleRequest, AISampleResponse, ChatChoice, ChatMessage, Usage
 
 
 class AISampleHandler(BasePluginHandler[AISampleRequest, AISampleResponse]):
@@ -29,20 +29,23 @@ class AISampleHandler(BasePluginHandler[AISampleRequest, AISampleResponse]):
         **kwargs
     ) -> AISampleResponse:
         """Process the AI sample request."""
-        # Override options if provided in request
-        if request.temperature is not None and self._plugin_options.openai:
-            self._plugin_options.openai.temperature = request.temperature
-        if request.max_tokens is not None and self._plugin_options.openai:
-            self._plugin_options.openai.max_tokens = request.max_tokens
+        # Convert ChatMessage objects to dictionaries for the command
+        messages = [msg.model_dump() for msg in request.messages]
         
         # Create command context
         context = AISampleCommandContext(
             chat_id=request.chat_id,
             agent_id=request.agent_id,
             agent_version=request.agent_version,
-            sample_prompt=request.sample_prompt,
-            use_ai=request.use_ai,
-            validate_schema=request.validate_schema
+            messages=messages,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,
+            top_p=request.top_p,
+            presence_penalty=request.presence_penalty,
+            frequency_penalty=request.frequency_penalty,
+            stop=request.stop if isinstance(request.stop, list) else [request.stop] if request.stop else None,
+            user=request.user
         )
         
         # Execute command
@@ -56,10 +59,26 @@ class AISampleHandler(BasePluginHandler[AISampleRequest, AISampleResponse]):
         # Determine if response was cached
         cached = context.metadata.get("cached", False)
         
-        # Create response
+        # Create response in OpenAI format
         return AISampleResponse(
-            ai_response=result.ai_response,
-            model_used=result.model_used,
-            tokens_used=result.tokens_used,
+            id=result.id,
+            object="chat.completion",
+            created=result.created,
+            model=result.model,
+            choices=[
+                ChatChoice(
+                    index=0,
+                    message=ChatMessage(
+                        role="assistant",
+                        content=result.content
+                    ),
+                    finish_reason=result.finish_reason
+                )
+            ],
+            usage=Usage(
+                prompt_tokens=result.prompt_tokens,
+                completion_tokens=result.completion_tokens,
+                total_tokens=result.total_tokens
+            ),
             cached=cached
         )
