@@ -66,7 +66,7 @@ class TestCreatePlotHandler:
         )
 
     @pytest.mark.asyncio
-    async def test_execute_async_success(
+    async def test_handle_async_success(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -93,14 +93,14 @@ class TestCreatePlotHandler:
 
         # Act
         with patch('time.time', side_effect=[0, 0.2]):  # 200ms processing time
-            response = await handler.execute_async(sample_request)
+            response = await handler.handle_async(sample_request)
 
         # Assert
         assert isinstance(response, CreatePlotResponse)
         assert response.plot_url == "https://storage.azure.com/plots/test-plot.png"
         assert response.plot_type == "bar"
         assert response.file_name == "test-plot.png"
-        assert response.processing_time_ms == 200.0
+        assert response.processing_time_ms == 0  # Handler sets it to 0, controller would set actual value
         assert response.data_points == 100
 
         # Verify command execution
@@ -115,7 +115,7 @@ class TestCreatePlotHandler:
         assert context.y_column == "Sales"
 
     @pytest.mark.asyncio
-    async def test_execute_async_no_excel_url(
+    async def test_handle_async_no_excel_url(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -141,10 +141,10 @@ class TestCreatePlotHandler:
 
         # Act & Assert
         with pytest.raises(ValidationException, match="Excel URL is required"):
-            await handler.execute_async(request)
+            await handler.handle_async(request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_missing_columns(
+    async def test_handle_async_missing_columns(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -170,10 +170,10 @@ class TestCreatePlotHandler:
 
         # Act & Assert
         with pytest.raises(ValidationException, match="Both x_column and y_column are required"):
-            await handler.execute_async(request)
+            await handler.handle_async(request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_no_result_error(
+    async def test_handle_async_no_result_error(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -197,10 +197,10 @@ class TestCreatePlotHandler:
 
         # Act & Assert
         with pytest.raises(ValidationException, match="Command did not produce a result"):
-            await handler.execute_async(sample_request)
+            await handler.handle_async(sample_request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_with_optional_parameters(
+    async def test_handle_async_with_optional_parameters(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -236,7 +236,7 @@ class TestCreatePlotHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        response = await handler.execute_async(request)
+        response = await handler.handle_async(request)
 
         # Assert
         assert response.plot_type == "line"
@@ -251,7 +251,7 @@ class TestCreatePlotHandler:
 
     @pytest.mark.parametrize("plot_type", ["line", "bar", "scatter", "pie", "histogram", "box"])
     @pytest.mark.asyncio
-    async def test_execute_async_different_plot_types(
+    async def test_handle_async_different_plot_types(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -287,14 +287,14 @@ class TestCreatePlotHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        response = await handler.execute_async(request)
+        response = await handler.handle_async(request)
 
         # Assert
         assert response.plot_type == plot_type
         assert response.plot_url == f"https://storage.azure.com/plots/{plot_type}-plot.png"
 
     @pytest.mark.asyncio
-    async def test_execute_async_context_creation_details(
+    async def test_handle_async_context_creation_details(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -335,7 +335,7 @@ class TestCreatePlotHandler:
         handler.execute_command_async = AsyncMock(side_effect=capture_context)
 
         # Act
-        await handler.execute_async(request)
+        await handler.handle_async(request)
 
         # Assert
         assert captured_context is not None

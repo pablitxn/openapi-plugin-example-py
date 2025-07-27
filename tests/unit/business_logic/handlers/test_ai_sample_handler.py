@@ -68,7 +68,7 @@ class TestAISampleHandler:
         )
 
     @pytest.mark.asyncio
-    async def test_execute_async_success(
+    async def test_handle_async_success(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -95,7 +95,7 @@ class TestAISampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        response = await handler.execute_async(sample_request)
+        response = await handler.handle_async(sample_request)
 
         # Assert
         assert isinstance(response, AISampleResponse)
@@ -115,7 +115,7 @@ class TestAISampleHandler:
         assert context.validate_schema is True
 
     @pytest.mark.asyncio
-    async def test_execute_async_with_custom_temperature(
+    async def test_handle_async_with_custom_temperature(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -151,14 +151,14 @@ class TestAISampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        await handler.execute_async(request)
+        await handler.handle_async(request)
 
         # Assert
         assert plugin_options.openai.temperature == 0.9
         assert plugin_options.openai.max_tokens == 500
 
     @pytest.mark.asyncio
-    async def test_execute_async_without_ai(
+    async def test_handle_async_without_ai(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -192,7 +192,7 @@ class TestAISampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        response = await handler.execute_async(request)
+        response = await handler.handle_async(request)
 
         # Assert
         assert response.ai_response == "Fallback response"
@@ -200,7 +200,7 @@ class TestAISampleHandler:
         assert response.tokens_used == 0
 
     @pytest.mark.asyncio
-    async def test_execute_async_cached_result(
+    async def test_handle_async_cached_result(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -227,14 +227,14 @@ class TestAISampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        response = await handler.execute_async(sample_request)
+        response = await handler.handle_async(sample_request)
 
         # Assert
         assert response.ai_response == "Cached AI response"
         assert response.cached is True
 
     @pytest.mark.asyncio
-    async def test_execute_async_no_result_error(
+    async def test_handle_async_no_result_error(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -258,10 +258,10 @@ class TestAISampleHandler:
 
         # Act & Assert
         with pytest.raises(ValueError, match="Command did not produce a result"):
-            await handler.execute_async(sample_request)
+            await handler.handle_async(sample_request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_no_openai_options(
+    async def test_handle_async_no_openai_options(
         self,
         mock_command_invoker_factory,
         mock_telemetry_service,
@@ -306,13 +306,13 @@ class TestAISampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act (should not raise exception)
-        response = await handler.execute_async(request)
+        response = await handler.handle_async(request)
 
         # Assert
         assert response.ai_response == "Response"
 
     @pytest.mark.asyncio
-    async def test_execute_async_context_creation_details(
+    async def test_handle_async_context_creation_details(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -351,7 +351,7 @@ class TestAISampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=capture_context)
 
         # Act
-        await handler.execute_async(request)
+        await handler.handle_async(request)
 
         # Assert
         assert captured_context is not None

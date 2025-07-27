@@ -7,7 +7,7 @@ from openapi_plugin_common import AzureBlobService
 from src.openapi_plugin_example_py.api.extensions.dependency_injection import (
     get_cache_service,
     get_blob_service,
-    get_openai_service,
+    get_llm_provider,
     get_geney_client,
     get_sample_handler,
     get_ai_sample_handler,
@@ -15,7 +15,7 @@ from src.openapi_plugin_example_py.api.extensions.dependency_injection import (
     get_create_plot_handler,
     get_cache_service_for_app,
     get_blob_service_for_app,
-    get_openai_service_for_app,
+    get_llm_provider_for_app,
     get_geney_client_for_app,
     setup_dependencies,
 )
@@ -144,44 +144,62 @@ class TestDependencyInjection:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_openai_service_configured(self, mock_request):
-        """Test get_openai_service when OpenAI is configured."""
+    async def test_get_llm_provider_configured(self, mock_request):
+        """Test get_llm_provider when Azure OpenAI is configured."""
         # Arrange
-        mock_openai_config = MagicMock()
-        mock_openai_config.api_key = "test-key"
-        mock_openai_config.model = "gpt-4"
-        mock_openai_config.temperature = 0.7
-        mock_openai_config.max_tokens = 1000
-        mock_request.app.state.settings.plugin_options.openai = mock_openai_config
+        mock_azure_config = MagicMock()
+        mock_azure_config.endpoint = "https://test.openai.azure.com"
+        mock_azure_config.api_key = "test-key"
+        mock_azure_config.deployment_name = "gpt-4"
+        mock_request.app.state.settings.plugin_options.azure_openai = mock_azure_config
+        mock_request.app.state.settings.plugin_options.openai = None
         
-        with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.OpenAIService') as mock_openai:
-            mock_openai_service = MagicMock()
-            mock_openai.return_value = mock_openai_service
+        with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.create_llm_provider') as mock_create_llm:
+            mock_llm_provider = MagicMock()
+            mock_create_llm.return_value = mock_llm_provider
             
             # Act
-            result = await get_openai_service(mock_request)
+            result = await get_llm_provider(mock_request)
             
             # Assert
-            assert result == mock_openai_service
-            mock_openai.assert_called_once_with(
-                api_key="test-key",
-                model="gpt-4",
-                temperature=0.7,
-                max_tokens=1000,
+            assert result == mock_llm_provider
+            mock_create_llm.assert_called_once_with(
+                config=mock_azure_config,
                 telemetry_service=mock_request.app.state.telemetry_service
             )
 
     @pytest.mark.asyncio
-    async def test_get_openai_service_not_configured(self, mock_request):
-        """Test get_openai_service when OpenAI is not configured."""
+    async def test_get_llm_provider_not_configured(self, mock_request):
+        """Test get_llm_provider when LLM is not configured."""
         # Arrange
+        mock_request.app.state.settings.plugin_options.azure_openai = None
         mock_request.app.state.settings.plugin_options.openai = None
         
         # Act
-        result = await get_openai_service(mock_request)
+        result = await get_llm_provider(mock_request)
         
         # Assert
         assert result is None
+    
+    @pytest.mark.asyncio
+    async def test_get_llm_provider_legacy_openai(self, mock_request):
+        """Test get_llm_provider with legacy OpenAI configuration (returns None)."""
+        # Arrange
+        mock_openai_config = MagicMock()
+        mock_openai_config.api_key = "test-key"
+        mock_request.app.state.settings.plugin_options.azure_openai = None
+        mock_request.app.state.settings.plugin_options.openai = mock_openai_config
+        mock_request.app.state.telemetry_service = MagicMock()
+        
+        # Act
+        result = await get_llm_provider(mock_request)
+        
+        # Assert
+        assert result is None
+        # Verify warning was logged
+        mock_request.app.state.telemetry_service.log_warning.assert_called_once_with(
+            "Using deprecated OpenAI configuration. Please migrate to Azure OpenAI."
+        )
 
     @pytest.mark.asyncio
     async def test_get_geney_client_configured(self, mock_request):
@@ -303,25 +321,25 @@ class TestDependencyInjection:
         assert result.__class__.__name__ == "FilesystemBlobService"
 
     @pytest.mark.asyncio
-    async def test_get_openai_service_for_app(self, mock_app):
-        """Test get_openai_service_for_app."""
+    async def test_get_llm_provider_for_app(self, mock_app):
+        """Test get_llm_provider_for_app."""
         # Arrange
-        mock_openai_config = MagicMock()
-        mock_openai_config.api_key = "test-key"
-        mock_openai_config.model = "gpt-4"
-        mock_openai_config.temperature = 0.7
-        mock_openai_config.max_tokens = 1000
-        mock_app.state.settings.plugin_options.openai = mock_openai_config
+        mock_azure_config = MagicMock()
+        mock_azure_config.endpoint = "https://test.openai.azure.com"
+        mock_azure_config.api_key = "test-key"
+        mock_azure_config.deployment_name = "gpt-4"
+        mock_app.state.settings.plugin_options.azure_openai = mock_azure_config
+        mock_app.state.settings.plugin_options.openai = None
         
-        with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.OpenAIService') as mock_openai:
-            mock_openai_service = MagicMock()
-            mock_openai.return_value = mock_openai_service
+        with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.create_llm_provider') as mock_create_llm:
+            mock_llm_provider = MagicMock()
+            mock_create_llm.return_value = mock_llm_provider
             
             # Act
-            result = await get_openai_service_for_app(mock_app)
+            result = await get_llm_provider_for_app(mock_app)
             
             # Assert
-            assert result == mock_openai_service
+            assert result == mock_llm_provider
 
     @pytest.mark.asyncio
     async def test_get_geney_client_for_app(self, mock_app):
@@ -394,13 +412,14 @@ class TestDependencyInjection:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_openai_service_for_app_not_configured(self, mock_app):
-        """Test get_openai_service_for_app when OpenAI is not configured."""
+    async def test_get_llm_provider_for_app_not_configured(self, mock_app):
+        """Test get_llm_provider_for_app when LLM is not configured."""
         # Arrange
+        mock_app.state.settings.plugin_options.azure_openai = None
         mock_app.state.settings.plugin_options.openai = None
         
         # Act
-        result = await get_openai_service_for_app(mock_app)
+        result = await get_llm_provider_for_app(mock_app)
         
         # Assert
         assert result is None
@@ -426,7 +445,7 @@ class TestDependencyInjection:
         
         with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.get_cache_service_for_app') as mock_cache:
             with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.get_blob_service_for_app') as mock_blob:
-                with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.get_openai_service_for_app') as mock_openai:
+                with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.get_llm_provider_for_app') as mock_openai:
                     with patch('src.openapi_plugin_example_py.api.extensions.dependency_injection.get_geney_client_for_app') as mock_geney:
                         mock_cache.return_value = MagicMock()
                         mock_blob.return_value = MagicMock()

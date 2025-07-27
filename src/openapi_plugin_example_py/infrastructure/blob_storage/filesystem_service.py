@@ -100,10 +100,15 @@ class FilesystemBlobService(IBlobService):
                 if file_type:
                     allowed_extensions = {
                         SupportedFileType.CSV: [".csv"],
-                        SupportedFileType.EXCEL: [".xlsx", ".xls"],
+                        SupportedFileType.XLSX: [".xlsx"],
+                        SupportedFileType.XLS: [".xls"],
                         SupportedFileType.JSON: [".json"],
-                        SupportedFileType.TEXT: [".txt"],
-                        SupportedFileType.IMAGE: [".png", ".jpg", ".jpeg", ".gif", ".bmp"],
+                        SupportedFileType.TXT: [".txt"],
+                        SupportedFileType.PNG: [".png"],
+                        SupportedFileType.JPG: [".jpg"],
+                        SupportedFileType.JPEG: [".jpeg"],
+                        SupportedFileType.GIF: [".gif"],
+                        SupportedFileType.BMP: [".bmp"],
                         SupportedFileType.PDF: [".pdf"]
                     }.get(file_type, [])
                     

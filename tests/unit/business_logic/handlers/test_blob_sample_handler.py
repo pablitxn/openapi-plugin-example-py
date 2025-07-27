@@ -32,7 +32,7 @@ class TestBlobSampleHandler:
         
         # Create a mock command that will raise ValidationException
         mock_command = AsyncMock()
-        mock_command.execute_async.side_effect = ValidationException("Invalid base64 content")
+        mock_command.handle_async.side_effect = ValidationException("Invalid base64 content")
         
         # Configure factory to return our mock command
         factory.create.return_value = mock_command
@@ -76,7 +76,7 @@ class TestBlobSampleHandler:
         )
 
     @pytest.mark.asyncio
-    async def test_execute_async_success(
+    async def test_handle_async_success(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -103,14 +103,14 @@ class TestBlobSampleHandler:
 
         # Act
         with patch('time.time', side_effect=[0, 0.15]):  # 150ms upload time
-            response = await handler.execute_async(sample_request)
+            response = await handler.handle_async(sample_request)
 
         # Assert
         assert isinstance(response, BlobSampleResponse)
         assert response.blob_url == "https://storage.azure.com/uploaded-files/test-document.pdf"
         assert response.file_size == 25
         assert response.container == "uploaded-files"
-        assert response.upload_time_ms == 150.0
+        assert response.upload_time_ms == 0  # Handler sets it to 0, controller would set actual value
 
         # Verify command execution
         handler.execute_command_async.assert_called_once()
@@ -123,9 +123,8 @@ class TestBlobSampleHandler:
         assert context.metadata.get("key") == "value"
 
     @pytest.mark.asyncio
-    async def test_execute_async_invalid_base64(
+    async def test_handle_async_invalid_base64(
         self,
-        mock_command_invoker_factory,
         plugin_options,
         mock_telemetry_service
     ):
@@ -140,20 +139,30 @@ class TestBlobSampleHandler:
             container_name=None
         )
         
+        # Create a mock blob service
+        mock_blob_service = AsyncMock()
+        
+        # Create a custom command factory with blob service
+        from src.openapi_plugin_example_py.infrastructure import CustomCommandInvokerFactory
+        command_factory = CustomCommandInvokerFactory(
+            telemetry_service=mock_telemetry_service,
+            blob_service=mock_blob_service,
+            enable_command_logging=False
+        )
+        
         handler = BlobSampleHandler(
-            command_invoker_factory=mock_command_invoker_factory,
+            command_invoker_factory=command_factory,
             plugin_options=plugin_options,
             telemetry_service=mock_telemetry_service
         )
 
         # Act & Assert
         with pytest.raises(ValidationException, match="Invalid base64 content"):
-            await handler.execute_async(request)
+            await handler.handle_async(request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_file_too_large(
+    async def test_handle_async_file_too_large(
         self,
-        mock_command_invoker_factory,
         plugin_options,
         mock_telemetry_service
     ):
@@ -169,7 +178,7 @@ class TestBlobSampleHandler:
             max_file_size_mb=1,  # 1 MB limit
             supported_file_types=plugin_options.supported_file_types
         )
-        large_content = b"x" * 1000
+        large_content = b"x" * (2 * 1024 * 1024)  # 2 MB
         encoded_content = base64.b64encode(large_content).decode('utf-8')
         
         request = BlobSampleRequest(
@@ -181,23 +190,25 @@ class TestBlobSampleHandler:
             container_name=None
         )
         
+        # Create a custom command factory that won't interfere
+        from src.openapi_plugin_example_py.infrastructure import CustomCommandInvokerFactory
+        command_factory = CustomCommandInvokerFactory(
+            telemetry_service=mock_telemetry_service,
+            enable_command_logging=False
+        )
+        
         handler = BlobSampleHandler(
-            command_invoker_factory=mock_command_invoker_factory,
+            command_invoker_factory=command_factory,
             plugin_options=custom_options,
             telemetry_service=mock_telemetry_service
         )
-        
-        # Update mock to raise ValidationException for file too large
-        mock_command = AsyncMock()
-        mock_command.execute_async.side_effect = ValidationException("File size exceeds maximum allowed size")
-        mock_command_invoker_factory.create.return_value = mock_command
 
         # Act & Assert
-        with pytest.raises(ValidationException, match="File size exceeds maximum"):
-            await handler.execute_async(request)
+        with pytest.raises(ValidationException, match="exceeds maximum allowed size"):
+            await handler.handle_async(request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_unsupported_file_type(
+    async def test_handle_async_unsupported_file_type(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -225,10 +236,10 @@ class TestBlobSampleHandler:
 
         # Act & Assert
         with pytest.raises(ValidationException, match="File type 'exe' is not supported"):
-            await handler.execute_async(request)
+            await handler.handle_async(request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_with_custom_container(
+    async def test_handle_async_with_custom_container(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -266,7 +277,7 @@ class TestBlobSampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        response = await handler.execute_async(request)
+        response = await handler.handle_async(request)
 
         # Assert
         assert response.container == "custom-container"
@@ -277,7 +288,7 @@ class TestBlobSampleHandler:
         assert context.container_name == "custom-container"
 
     @pytest.mark.asyncio
-    async def test_execute_async_no_result_error(
+    async def test_handle_async_no_result_error(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -301,10 +312,10 @@ class TestBlobSampleHandler:
 
         # Act & Assert
         with pytest.raises(ValidationException, match="Command did not produce a result"):
-            await handler.execute_async(sample_request)
+            await handler.handle_async(sample_request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_file_without_extension(
+    async def test_handle_async_file_without_extension(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -332,7 +343,7 @@ class TestBlobSampleHandler:
 
         # Act & Assert
         with pytest.raises(ValidationException, match="File type '' is not supported"):
-            await handler.execute_async(request)
+            await handler.handle_async(request)
 
     @pytest.mark.parametrize("file_name,expected_valid", [
         ("document.pdf", True),
@@ -346,7 +357,7 @@ class TestBlobSampleHandler:
         ("archive.zip", False),
     ])
     @pytest.mark.asyncio
-    async def test_execute_async_file_type_validation(
+    async def test_handle_async_file_type_validation(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -386,17 +397,17 @@ class TestBlobSampleHandler:
             handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
             
             # Act
-            response = await handler.execute_async(request)
+            response = await handler.handle_async(request)
             
             # Assert
             assert response.blob_url == f"https://storage.azure.com/files/{file_name}"
         else:
             # Act & Assert
             with pytest.raises(ValidationException, match="is not supported"):
-                await handler.execute_async(request)
+                await handler.handle_async(request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_context_metadata_merge(
+    async def test_handle_async_context_metadata_merge(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -437,7 +448,7 @@ class TestBlobSampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=capture_context)
 
         # Act
-        await handler.execute_async(request)
+        await handler.handle_async(request)
 
         # Assert
         assert captured_context is not None

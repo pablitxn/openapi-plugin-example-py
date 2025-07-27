@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Test script for OpenAPI plugin endpoints."""
-import asyncio
 import base64
 import json
-import httpx
 import pytest
 from pathlib import Path
+from fastapi.testclient import TestClient
+from unittest.mock import patch, MagicMock
+from main import app
 
 
-BASE_URL = "http://localhost:8000"
 API_PREFIX = "/api/plugin/ExamplePlugin/v1"
 
 # Headers for requests (mock auth in development)
@@ -20,59 +20,63 @@ headers = {
 }
 
 
-@pytest.mark.asyncio
-async def test_health():
+def test_health():
     """Test health endpoint."""
     print("\n=== Testing Health Endpoint ===")
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{BASE_URL}/health")
+    with TestClient(app) as client:
+        response = client.get("/health")
         print(f"Status: {response.status_code}")
         print(f"Response: {json.dumps(response.json(), indent=2)}")
-        return response.status_code == 200
+        assert response.status_code == 200
 
 
-@pytest.mark.asyncio
-async def test_sample():
+def test_sample():
     """Test sample endpoint."""
     print("\n=== Testing Sample Endpoint ===")
-    async with httpx.AsyncClient() as client:
-        params = {
-            "sample_input": "Hello World",
-            "use_cache": "false"
-        }
-        response = await client.get(
-            f"{BASE_URL}{API_PREFIX}/sample",
-            params=params,
-            headers=headers
-        )
-        print(f"Status: {response.status_code}")
-        print(f"Response: {json.dumps(response.json(), indent=2)}")
-        return response.status_code == 200
+    with TestClient(app) as client:
+        # Mock authentication
+        with patch('src.openapi_plugin_example_py.infrastructure.security.auth.JWTBearer.__call__') as mock_auth:
+            mock_auth.return_value = {"permissions": ["read", "write"]}
+            
+            params = {
+                "sample_input": "Hello World",
+                "use_cache": "false"
+            }
+            response = client.get(
+                f"{API_PREFIX}/sample",
+                params=params,
+                headers=headers
+            )
+            print(f"Status: {response.status_code}")
+            print(f"Response: {json.dumps(response.json(), indent=2)}")
+            assert response.status_code == 200
 
 
-@pytest.mark.asyncio
-async def test_ai_sample():
+def test_ai_sample():
     """Test AI sample endpoint."""
     print("\n=== Testing AI Sample Endpoint ===")
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        data = {
-            "sample_prompt": "Explain quantum computing in simple terms",
-            "use_ai": True,
-            "temperature": 0.7,
-            "max_tokens": 150
-        }
-        response = await client.post(
-            f"{BASE_URL}{API_PREFIX}/ai-sample",
-            json=data,
-            headers=headers
-        )
-        print(f"Status: {response.status_code}")
-        print(f"Response: {json.dumps(response.json(), indent=2)}")
-        return response.status_code == 200
+    with TestClient(app) as client:
+        # Mock authentication
+        with patch('src.openapi_plugin_example_py.infrastructure.security.auth.JWTBearer.__call__') as mock_auth:
+            mock_auth.return_value = {"permissions": ["read", "write"]}
+            
+            data = {
+                "sample_prompt": "Explain quantum computing in simple terms",
+                "use_ai": True,
+                "temperature": 0.7,
+                "max_tokens": 150
+            }
+            response = client.post(
+                f"{API_PREFIX}/ai-sample",
+                json=data,
+                headers=headers
+            )
+            print(f"Status: {response.status_code}")
+            print(f"Response: {json.dumps(response.json(), indent=2)}")
+            assert response.status_code == 200
 
 
-@pytest.mark.asyncio
-async def test_blob_sample():
+def test_blob_sample():
     """Test blob sample endpoint."""
     print("\n=== Testing Blob Sample Endpoint ===")
     
@@ -80,28 +84,31 @@ async def test_blob_sample():
     test_content = "This is a test file for blob storage."
     encoded_content = base64.b64encode(test_content.encode()).decode()
     
-    async with httpx.AsyncClient() as client:
-        data = {
-            "file_name": "test_document.txt",
-            "file_content_base64": encoded_content,
-            "container_name": "dev-uploads",
-            "metadata": {
-                "description": "Test file upload",
-                "uploaded_by": "test_script"
+    with TestClient(app) as client:
+        # Mock authentication
+        with patch('src.openapi_plugin_example_py.infrastructure.security.auth.JWTBearer.__call__') as mock_auth:
+            mock_auth.return_value = {"permissions": ["read", "write"]}
+            
+            data = {
+                "file_name": "test_document.txt",
+                "file_content_base64": encoded_content,
+                "container_name": "dev-uploads",
+                "metadata": {
+                    "description": "Test file upload",
+                    "uploaded_by": "test_script"
+                }
             }
-        }
-        response = await client.post(
-            f"{BASE_URL}{API_PREFIX}/blob-sample",
-            json=data,
-            headers=headers
-        )
-        print(f"Status: {response.status_code}")
-        print(f"Response: {json.dumps(response.json(), indent=2)}")
-        return response.status_code == 200
+            response = client.post(
+                f"{API_PREFIX}/blob-sample",
+                json=data,
+                headers=headers
+            )
+            print(f"Status: {response.status_code}")
+            print(f"Response: {json.dumps(response.json(), indent=2)}")
+            assert response.status_code == 200
 
 
-@pytest.mark.asyncio
-async def test_create_plot():
+def test_create_plot():
     """Test create plot endpoint."""
     print("\n=== Testing Create Plot Endpoint ===")
     
@@ -128,78 +135,55 @@ async def test_create_plot():
             excel_content = f.read()
         encoded_excel = base64.b64encode(excel_content).decode()
         
-        async with httpx.AsyncClient() as client:
-            # Upload Excel file
-            upload_data = {
-                "file_name": "test_sales_data.xlsx",
-                "file_content_base64": encoded_excel,
-                "container_name": "dev-uploads"
-            }
-            upload_response = await client.post(
-                f"{BASE_URL}{API_PREFIX}/blob-sample",
-                json=upload_data,
-                headers=headers
-            )
-            print(f"Excel upload status: {upload_response.status_code}")
-            
-            if upload_response.status_code == 200:
-                blob_url = upload_response.json()["blob_url"]
+        with TestClient(app) as client:
+            # Mock authentication
+            with patch('src.openapi_plugin_example_py.infrastructure.security.jwt_bearer.decode_token') as mock_decode:
+                mock_decode.return_value = {"permissions": ["read", "write"]}
                 
-                # Now create the plot
-                # For filesystem storage, we can also use the direct file path
-                plot_data = {
-                    "excel_url": f"file://{Path('./mock_storage/data/sales_data.xlsx').absolute()}",
-                    "plot_type": "bar", 
-                    "x_column": "Month",
-                    "y_column": "Sales",
-                    "title": "Monthly Sales Report",
-                    "sheet_name": "Sheet1",
-                    "figure_size": [10, 6]
+                # Upload Excel file
+                upload_data = {
+                    "file_name": "test_sales_data.xlsx",
+                    "file_content_base64": encoded_excel,
+                    "container_name": "dev-uploads"
                 }
-                response = await client.post(
-                    f"{BASE_URL}{API_PREFIX}/create-plot",
-                    json=plot_data,
+                upload_response = client.post(
+                    f"{API_PREFIX}/blob-sample",
+                    json=upload_data,
                     headers=headers
                 )
-                print(f"Create plot status: {response.status_code}")
-                print(f"Response: {json.dumps(response.json(), indent=2)}")
-                return response.status_code == 200
-            else:
-                print(f"Failed to upload Excel file: {upload_response.json()}")
-                return False
+                print(f"Excel upload status: {upload_response.status_code}")
+                
+                if upload_response.status_code == 200:
+                    blob_url = upload_response.json()["blob_url"]
+                    
+                    # Now create the plot
+                    # For filesystem storage, we can also use the direct file path
+                    plot_data = {
+                        "excel_url": f"file://{Path('./mock_storage/data/sales_data.xlsx').absolute()}",
+                        "plot_type": "bar", 
+                        "x_column": "Month",
+                        "y_column": "Sales",
+                        "title": "Monthly Sales Report",
+                        "sheet_name": "Sheet1",
+                        "figure_size": [10, 6]
+                    }
+                    response = client.post(
+                        f"{API_PREFIX}/create-plot",
+                        json=plot_data,
+                        headers=headers
+                    )
+                    print(f"Create plot status: {response.status_code}")
+                    print(f"Response: {json.dumps(response.json(), indent=2)}")
+                    assert response.status_code == 200
+                else:
+                    print(f"Failed to upload Excel file: {upload_response.json()}")
+                    assert False
                 
     except ImportError:
         print("Pandas or openpyxl not installed. Skipping create plot test.")
-        return True
-
-
-async def main():
-    """Run all tests."""
-    print("Starting OpenAPI Plugin Tests...")
-    print(f"Base URL: {BASE_URL}")
-    print(f"API Prefix: {API_PREFIX}")
-    
-    tests = [
-        ("Health Check", test_health),
-        ("Sample Endpoint", test_sample),
-        ("AI Sample Endpoint", test_ai_sample),
-        ("Blob Sample Endpoint", test_blob_sample),
-        ("Create Plot Endpoint", test_create_plot)
-    ]
-    
-    results = []
-    for test_name, test_func in tests:
-        try:
-            success = await test_func()
-            results.append((test_name, "✓" if success else "✗"))
-        except Exception as e:
-            print(f"Error in {test_name}: {e}")
-            results.append((test_name, "✗"))
-    
-    print("\n=== Test Results ===")
-    for test_name, result in results:
-        print(f"{result} {test_name}")
+        pytest.skip("Pandas or openpyxl not installed")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Run tests using pytest
+    pytest.main([__file__, "-v"])

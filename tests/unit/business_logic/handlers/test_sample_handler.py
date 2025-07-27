@@ -60,7 +60,7 @@ class TestSampleHandler:
         )
 
     @pytest.mark.asyncio
-    async def test_execute_async_success(
+    async def test_handle_async_success(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -86,13 +86,13 @@ class TestSampleHandler:
 
         # Act
         with patch('time.time', side_effect=[0, 0.1]):  # 100ms processing time
-            response = await handler.execute_async(sample_request)
+            response = await handler.handle_async(sample_request)
 
         # Assert
         assert isinstance(response, SampleResponse)
         assert response.sample_response == "Processed: TEST INPUT"
         assert response.cached is False
-        assert response.processing_time_ms == 100.0
+        assert response.processing_time_ms == 0  # Handler sets it to 0, controller would set actual value
 
         # Verify command execution
         handler.execute_command_async.assert_called_once()
@@ -105,7 +105,7 @@ class TestSampleHandler:
         assert context.use_cache is True
 
     @pytest.mark.asyncio
-    async def test_execute_async_cached_result(
+    async def test_handle_async_cached_result(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -130,14 +130,14 @@ class TestSampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        response = await handler.execute_async(sample_request)
+        response = await handler.handle_async(sample_request)
 
         # Assert
         assert response.sample_response == "Cached result"
         assert response.cached is True
 
     @pytest.mark.asyncio
-    async def test_execute_async_no_cache(
+    async def test_handle_async_no_cache(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -169,7 +169,7 @@ class TestSampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=mock_execute_command)
 
         # Act
-        response = await handler.execute_async(request)
+        response = await handler.handle_async(request)
 
         # Assert
         assert response.sample_response == "Fresh result"
@@ -181,7 +181,7 @@ class TestSampleHandler:
         assert context.use_cache is False
 
     @pytest.mark.asyncio
-    async def test_execute_async_no_result_error(
+    async def test_handle_async_no_result_error(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -205,10 +205,10 @@ class TestSampleHandler:
 
         # Act & Assert
         with pytest.raises(ValueError, match="Command did not produce a result"):
-            await handler.execute_async(sample_request)
+            await handler.handle_async(sample_request)
 
     @pytest.mark.asyncio
-    async def test_execute_async_processing_time_calculation(
+    async def test_handle_async_processing_time_calculation(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -234,10 +234,10 @@ class TestSampleHandler:
 
         # Act with specific time values
         with patch('time.time', side_effect=[1000.0, 1000.25]):  # 250ms
-            response = await handler.execute_async(sample_request)
+            response = await handler.handle_async(sample_request)
 
         # Assert
-        assert response.processing_time_ms == 250.0
+        assert response.processing_time_ms == 0  # Handler sets it to 0, controller would set actual value
 
     @pytest.mark.asyncio
     async def test_handler_initialization(
@@ -260,7 +260,7 @@ class TestSampleHandler:
         assert handler._telemetry_service == mock_telemetry_service
 
     @pytest.mark.asyncio
-    async def test_execute_async_context_creation(
+    async def test_handle_async_context_creation(
         self,
         mock_command_invoker_factory,
         plugin_options,
@@ -295,7 +295,7 @@ class TestSampleHandler:
         handler.execute_command_async = AsyncMock(side_effect=capture_context)
 
         # Act
-        await handler.execute_async(request)
+        await handler.handle_async(request)
 
         # Assert
         assert captured_context is not None

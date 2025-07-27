@@ -143,18 +143,18 @@ class BlobSampleCommand(CommandBase[BlobSampleCommandContext, ExamplePluginOptio
         
         type_mapping = {
             'pdf': SupportedFileType.PDF,
-            'png': SupportedFileType.IMAGE,
-            'jpg': SupportedFileType.IMAGE,
-            'jpeg': SupportedFileType.IMAGE,
-            'txt': SupportedFileType.TEXT,
+            'png': SupportedFileType.PNG,
+            'jpg': SupportedFileType.JPG,
+            'jpeg': SupportedFileType.JPEG,
+            'txt': SupportedFileType.TXT,
             'json': SupportedFileType.JSON,
             'csv': SupportedFileType.CSV,
-            'xlsx': SupportedFileType.EXCEL,
-            'xls': SupportedFileType.EXCEL,
-            'docx': SupportedFileType.WORD,
-            'doc': SupportedFileType.WORD,
-            'pptx': SupportedFileType.POWERPOINT,
-            'ppt': SupportedFileType.POWERPOINT,
+            'xlsx': SupportedFileType.XLSX,
+            'xls': SupportedFileType.XLS,
+            'docx': SupportedFileType.DOCX,
+            'doc': SupportedFileType.DOC,
+            'pptx': SupportedFileType.PPTX,
+            'ppt': SupportedFileType.PPT,
             'zip': SupportedFileType.ZIP
         }
         

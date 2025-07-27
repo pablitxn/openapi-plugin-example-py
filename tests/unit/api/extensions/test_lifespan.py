@@ -31,6 +31,7 @@ class TestLifespan:
         settings.telemetry.logger_name = "test.logger"
         settings.plugin_options.openai = MagicMock()
         settings.plugin_options.openai.api_key = "test-openai-key"
+        settings.plugin_options.azure_openai = None
         return settings
 
     @pytest.mark.asyncio
@@ -48,7 +49,7 @@ class TestLifespan:
                     mock_setup.return_value = None
                     mock_app.state.cache_service = MagicMock()
                     mock_app.state.blob_service = MagicMock()
-                    mock_app.state.openai_service = MagicMock()
+                    mock_app.state.llm_provider = MagicMock()
                     
                     with patch('src.openapi_plugin_example_py.api.extensions.lifespan.CustomCommandInvokerFactory') as mock_factory:
                         mock_factory_instance = MagicMock()
@@ -76,7 +77,10 @@ class TestLifespan:
                                 telemetry_service=mock_telemetry_instance,
                                 cache_service=mock_app.state.cache_service,
                                 blob_service=mock_app.state.blob_service,
-                                openai_service=mock_app.state.openai_service
+                                llm_provider=mock_app.state.llm_provider,
+                                enable_command_logging=True,
+                                session_id=None,
+                                user_id=None
                             )
                         
                         # Verify cleanup after yield
@@ -94,7 +98,7 @@ class TestLifespan:
                 mock_setup.return_value = None
                 mock_app.state.cache_service = None
                 mock_app.state.blob_service = None
-                mock_app.state.openai_service = None
+                mock_app.state.llm_provider = None
                 
                 with patch('src.openapi_plugin_example_py.api.extensions.lifespan.CustomCommandInvokerFactory') as mock_factory:
                     mock_factory_instance = MagicMock()
@@ -109,7 +113,10 @@ class TestLifespan:
                             telemetry_service=None,
                             cache_service=None,
                             blob_service=None,
-                            openai_service=None
+                            llm_provider=None,
+                            enable_command_logging=True,
+                            session_id=None,
+                            user_id=None
                         )
 
     @pytest.mark.asyncio
@@ -126,7 +133,7 @@ class TestLifespan:
                     mock_setup.return_value = None
                     mock_app.state.cache_service = None
                     mock_app.state.blob_service = None
-                    mock_app.state.openai_service = None
+                    mock_app.state.llm_provider = None
                     
                     with patch('src.openapi_plugin_example_py.api.extensions.lifespan.CustomCommandInvokerFactory') as mock_factory:
                         mock_factory_instance = MagicMock()
@@ -156,7 +163,7 @@ class TestLifespan:
                     mock_setup.return_value = None
                     mock_app.state.cache_service = None
                     mock_app.state.blob_service = None
-                    mock_app.state.openai_service = None
+                    mock_app.state.llm_provider = None
                     
                     with patch('src.openapi_plugin_example_py.api.extensions.lifespan.CustomCommandInvokerFactory') as mock_factory:
                         with patch('src.openapi_plugin_example_py.api.extensions.lifespan.logger') as mock_logger:
@@ -177,7 +184,7 @@ class TestLifespan:
                 mock_setup.return_value = None
                 mock_app.state.cache_service = None
                 mock_app.state.blob_service = None
-                mock_app.state.openai_service = None
+                mock_app.state.llm_provider = None
                 
                 with patch('src.openapi_plugin_example_py.api.extensions.lifespan.CustomCommandInvokerFactory') as mock_factory:
                     async with lifespan(mock_app):
@@ -198,7 +205,7 @@ class TestLifespan:
                     mock_setup.return_value = None
                     mock_app.state.cache_service = MagicMock()
                     mock_app.state.blob_service = MagicMock()
-                    mock_app.state.openai_service = MagicMock()
+                    mock_app.state.llm_provider = MagicMock()
                     
                     with patch('src.openapi_plugin_example_py.api.extensions.lifespan.CustomCommandInvokerFactory'):
                         with patch('src.openapi_plugin_example_py.api.extensions.lifespan.logger') as mock_logger:
@@ -217,7 +224,7 @@ class TestLifespan:
                             assert "Example Plugin started successfully" in log_calls
                             assert "Blob service configured: True" in log_calls
                             assert any("Blob service type:" in msg for msg in log_calls)
-                            assert "OpenAI service configured: True" in log_calls
+                            assert "LLM provider configured: True" in log_calls
                             assert "Cache service configured: True" in log_calls
                             assert "Shutting down Example Plugin..." in log_calls
                             assert "Example Plugin shut down successfully" in log_calls

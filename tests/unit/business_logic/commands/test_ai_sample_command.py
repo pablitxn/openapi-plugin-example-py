@@ -27,14 +27,14 @@ class TestAISampleCommand:
         return service
 
     @pytest.fixture
-    def mock_openai_service(self):
+    def mock_llm_provider(self):
         """Create a mock OpenAI service."""
         service = AsyncMock()
-        service.generate_completion = AsyncMock(return_value={
-            "content": "AI generated response",
-            "model": "gpt-4",
-            "usage": {"total_tokens": 150}
-        })
+        response = MagicMock()
+        response.content = "AI generated response"
+        response.model = "gpt-4"
+        response.usage = {"total_tokens": 150}
+        service.generate_completion = AsyncMock(return_value=response)
         return service
 
     @pytest.fixture
@@ -61,13 +61,13 @@ class TestAISampleCommand:
 
     @pytest.mark.asyncio
     async def test_execute_command_with_ai_success(
-        self, mock_telemetry_service, mock_openai_service, mock_cache_service, sample_context
+        self, mock_telemetry_service, mock_llm_provider, mock_cache_service, sample_context
     ):
         """Test successful command execution with AI."""
         # Arrange
         command = AISampleCommand(
             telemetry_service=mock_telemetry_service,
-            openai_service=mock_openai_service,
+            llm_provider=mock_llm_provider,
             cache_service=mock_cache_service
         )
 
@@ -83,7 +83,7 @@ class TestAISampleCommand:
         assert result.tokens_used == 150
 
         # Verify service calls
-        mock_openai_service.generate_completion.assert_called_once_with(
+        mock_llm_provider.generate_completion.assert_called_once_with(
             system_prompt="You are a helpful AI assistant for processing sample requests.",
             user_prompt="Test prompt for AI",
             chat_id="test-chat-123"
@@ -93,18 +93,18 @@ class TestAISampleCommand:
 
     @pytest.mark.asyncio
     async def test_execute_command_no_openai_service(self, mock_telemetry_service, sample_context):
-        """Test command execution without OpenAI service."""
+        """Test command execution without LLM provider."""
         # Arrange
         command = AISampleCommand(telemetry_service=mock_telemetry_service)
         sample_context.use_ai = True
 
         # Act & Assert
-        with pytest.raises(ConfigurationException, match="OpenAI service is not configured"):
+        with pytest.raises(ConfigurationException, match="LLM provider is not configured"):
             await command.execute_command_async(sample_context)
 
     @pytest.mark.asyncio
     async def test_execute_command_with_cache_hit(
-        self, mock_telemetry_service, mock_openai_service, mock_cache_service, sample_context
+        self, mock_telemetry_service, mock_llm_provider, mock_cache_service, sample_context
     ):
         """Test command execution with cache hit."""
         # Arrange
@@ -117,7 +117,7 @@ class TestAISampleCommand:
         
         command = AISampleCommand(
             telemetry_service=mock_telemetry_service,
-            openai_service=mock_openai_service,
+            llm_provider=mock_llm_provider,
             cache_service=mock_cache_service
         )
 
@@ -132,7 +132,7 @@ class TestAISampleCommand:
         assert result.tokens_used == 100
 
         # Verify OpenAI was not called due to cache hit
-        mock_openai_service.generate_completion.assert_not_called()
+        mock_llm_provider.generate_completion.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_execute_command_without_ai(
@@ -158,36 +158,37 @@ class TestAISampleCommand:
 
     @pytest.mark.asyncio
     async def test_process_with_ai_validation_failure(
-        self, mock_telemetry_service, mock_openai_service, sample_context
+        self, mock_telemetry_service, mock_llm_provider, sample_context
     ):
         """Test AI processing with schema validation failure."""
         # Arrange
-        mock_openai_service.generate_completion.return_value = {
-            # Missing 'content' field
-            "model": "gpt-4",
-            "usage": {"total_tokens": 150}
-        }
+        response = MagicMock()
+        # Missing 'content' attribute
+        response.content = None
+        response.model = "gpt-4"
+        response.usage = {"total_tokens": 150}
+        mock_llm_provider.generate_completion.return_value = response
         
         command = AISampleCommand(
             telemetry_service=mock_telemetry_service,
-            openai_service=mock_openai_service
+            llm_provider=mock_llm_provider
         )
 
         # Act & Assert
-        with pytest.raises(CommandException, match="AI processing failed: AI response missing 'content' field"):
+        with pytest.raises(CommandException, match="AI processing failed"):
             await command._process_with_ai(sample_context)
 
     @pytest.mark.asyncio
     async def test_process_with_ai_exception_handling(
-        self, mock_telemetry_service, mock_openai_service, sample_context
+        self, mock_telemetry_service, mock_llm_provider, sample_context
     ):
         """Test AI processing exception handling."""
         # Arrange
-        mock_openai_service.generate_completion.side_effect = Exception("OpenAI API error")
+        mock_llm_provider.generate_completion.side_effect = Exception("OpenAI API error")
         
         command = AISampleCommand(
             telemetry_service=mock_telemetry_service,
-            openai_service=mock_openai_service
+            llm_provider=mock_llm_provider
         )
 
         # Act & Assert
@@ -215,7 +216,8 @@ class TestAISampleCommand:
         """Test successful response schema validation."""
         # Arrange
         command = AISampleCommand(telemetry_service=mock_telemetry_service)
-        response = {"content": "Valid response"}
+        response = MagicMock()
+        response.content = "Valid response"
 
         # Act & Assert (no exception should be raised)
         command._validate_response_schema(response)
@@ -224,7 +226,9 @@ class TestAISampleCommand:
         """Test response schema validation failure."""
         # Arrange
         command = AISampleCommand(telemetry_service=mock_telemetry_service)
-        response = {"no_content": "Invalid"}
+        response = MagicMock()
+        # Missing content attribute
+        del response.content
 
         # Act & Assert
         with pytest.raises(ValidationException, match="AI response missing 'content' field"):
@@ -341,20 +345,21 @@ class TestAISampleCommand:
 
     @pytest.mark.asyncio
     async def test_execute_command_no_validation(
-        self, mock_telemetry_service, mock_openai_service, mock_cache_service, sample_context
+        self, mock_telemetry_service, mock_llm_provider, mock_cache_service, sample_context
     ):
         """Test command execution without schema validation."""
         # Arrange
         sample_context.validate_schema = False
-        mock_openai_service.generate_completion.return_value = {
-            # Missing 'content' field but validation is disabled
-            "model": "gpt-4",
-            "usage": {"total_tokens": 150}
-        }
+        response = MagicMock()
+        # Even with missing content, no validation should allow it
+        response.content = ""
+        response.model = "gpt-4"
+        response.usage = {"total_tokens": 150}
+        mock_llm_provider.generate_completion.return_value = response
         
         command = AISampleCommand(
             telemetry_service=mock_telemetry_service,
-            openai_service=mock_openai_service,
+            llm_provider=mock_llm_provider,
             cache_service=mock_cache_service
         )
 

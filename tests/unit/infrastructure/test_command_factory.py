@@ -24,7 +24,7 @@ class TestCustomCommandInvokerFactory:
             'telemetry_service': MagicMock(name='telemetry_service'),
             'cache_service': MagicMock(name='cache_service'),
             'blob_service': MagicMock(name='blob_service'),
-            'openai_service': MagicMock(name='openai_service')
+            'llm_provider': MagicMock(name='llm_provider')
         }
 
     @pytest.fixture
@@ -34,7 +34,7 @@ class TestCustomCommandInvokerFactory:
             telemetry_service=mock_services['telemetry_service'],
             cache_service=mock_services['cache_service'],
             blob_service=mock_services['blob_service'],
-            openai_service=mock_services['openai_service']
+            llm_provider=mock_services['llm_provider']
         )
 
     def test_initialization(self, mock_services):
@@ -44,14 +44,14 @@ class TestCustomCommandInvokerFactory:
             telemetry_service=mock_services['telemetry_service'],
             cache_service=mock_services['cache_service'],
             blob_service=mock_services['blob_service'],
-            openai_service=mock_services['openai_service']
+            llm_provider=mock_services['llm_provider']
         )
 
         # Assert
         assert factory._telemetry_service == mock_services['telemetry_service']
         assert factory._cache_service == mock_services['cache_service']
         assert factory._blob_service == mock_services['blob_service']
-        assert factory._openai_service == mock_services['openai_service']
+        assert factory._llm_provider == mock_services['llm_provider']
 
     def test_create_sample_command(self, command_factory, mock_services):
         """Test creating SampleCommand."""
@@ -60,9 +60,11 @@ class TestCustomCommandInvokerFactory:
             command = command_factory.create(SampleCommand)
 
         # Assert
-        assert isinstance(command, SampleCommand)
-        assert command._telemetry_service == mock_services['telemetry_service']
-        assert command._cache_service == mock_services['cache_service']
+        from openapi_plugin_common.log_events import LoggedCommandWrapper
+        assert isinstance(command, LoggedCommandWrapper)
+        assert isinstance(command.command, SampleCommand)
+        assert command.command._telemetry_service == mock_services['telemetry_service']
+        assert command.command._cache_service == mock_services['cache_service']
 
     def test_create_blob_sample_command(self, command_factory, mock_services):
         """Test creating BlobSampleCommand."""
@@ -71,9 +73,11 @@ class TestCustomCommandInvokerFactory:
             command = command_factory.create(BlobSampleCommand)
 
         # Assert
-        assert isinstance(command, BlobSampleCommand)
-        assert command._telemetry_service == mock_services['telemetry_service']
-        assert command._blob_service == mock_services['blob_service']
+        from openapi_plugin_common.log_events import LoggedCommandWrapper
+        assert isinstance(command, LoggedCommandWrapper)
+        assert isinstance(command.command, BlobSampleCommand)
+        assert command.command._telemetry_service == mock_services['telemetry_service']
+        assert command.command._blob_service == mock_services['blob_service']
 
     def test_create_ai_sample_command(self, command_factory, mock_services):
         """Test creating AISampleCommand."""
@@ -82,10 +86,12 @@ class TestCustomCommandInvokerFactory:
             command = command_factory.create(AISampleCommand)
 
         # Assert
-        assert isinstance(command, AISampleCommand)
-        assert command._telemetry_service == mock_services['telemetry_service']
-        assert command._cache_service == mock_services['cache_service']
-        assert command._openai_service == mock_services['openai_service']
+        from openapi_plugin_common.log_events import LoggedCommandWrapper
+        assert isinstance(command, LoggedCommandWrapper)
+        assert isinstance(command.command, AISampleCommand)
+        assert command.command._telemetry_service == mock_services['telemetry_service']
+        assert command.command._cache_service == mock_services['cache_service']
+        assert command.command._llm_provider == mock_services['llm_provider']
 
     def test_create_create_plot_command(self, command_factory, mock_services):
         """Test creating CreatePlotCommand."""
@@ -94,9 +100,11 @@ class TestCustomCommandInvokerFactory:
             command = command_factory.create(CreatePlotCommand)
 
         # Assert
-        assert isinstance(command, CreatePlotCommand)
-        assert command._telemetry_service == mock_services['telemetry_service']
-        assert command._blob_service == mock_services['blob_service']
+        from openapi_plugin_common.log_events import LoggedCommandWrapper
+        assert isinstance(command, LoggedCommandWrapper)
+        assert isinstance(command.command, CreatePlotCommand)
+        assert command.command._telemetry_service == mock_services['telemetry_service']
+        assert command.command._blob_service == mock_services['blob_service']
 
     def test_create_unknown_command(self, command_factory):
         """Test creating unknown command falls back to parent."""
@@ -115,7 +123,9 @@ class TestCustomCommandInvokerFactory:
                 command = command_factory.create(UnknownCommand)
 
         # Assert
-        assert isinstance(command, UnknownCommand)
+        from openapi_plugin_common.log_events import LoggedCommandWrapper
+        assert isinstance(command, LoggedCommandWrapper)
+        assert isinstance(command.command, UnknownCommand)
         mock_parent_create.assert_called_once_with(UnknownCommand)
 
     def test_create_with_none_services(self):
@@ -125,7 +135,7 @@ class TestCustomCommandInvokerFactory:
             telemetry_service=None,
             cache_service=None,
             blob_service=None,
-            openai_service=None
+            llm_provider=None
         )
 
         # Act
@@ -136,18 +146,23 @@ class TestCustomCommandInvokerFactory:
             plot_command = factory.create(CreatePlotCommand)
 
         # Assert
-        assert isinstance(sample_command, SampleCommand)
-        assert sample_command._telemetry_service is None
-        assert sample_command._cache_service is None
+        from openapi_plugin_common.log_events import LoggedCommandWrapper
+        assert isinstance(sample_command, LoggedCommandWrapper)
+        assert isinstance(sample_command.command, SampleCommand)
+        assert sample_command.command._telemetry_service is None
+        assert sample_command.command._cache_service is None
 
-        assert isinstance(blob_command, BlobSampleCommand)
-        assert blob_command._blob_service is None
+        assert isinstance(blob_command, LoggedCommandWrapper)
+        assert isinstance(blob_command.command, BlobSampleCommand)
+        assert blob_command.command._blob_service is None
 
-        assert isinstance(ai_command, AISampleCommand)
-        assert ai_command._openai_service is None
+        assert isinstance(ai_command, LoggedCommandWrapper)
+        assert isinstance(ai_command.command, AISampleCommand)
+        assert ai_command.command._llm_provider is None
 
-        assert isinstance(plot_command, CreatePlotCommand)
-        assert plot_command._blob_service is None
+        assert isinstance(plot_command, LoggedCommandWrapper)
+        assert isinstance(plot_command.command, CreatePlotCommand)
+        assert plot_command.command._blob_service is None
 
     def test_debug_logging(self, command_factory, capsys):
         """Test debug logging output."""
@@ -159,7 +174,7 @@ class TestCustomCommandInvokerFactory:
         assert "CustomCommandInvokerFactory.create called for" in captured.out
         assert "SampleCommand" in captured.out
         assert "Blob service available: True" in captured.out
-        assert "OpenAI service available: True" in captured.out
+        assert "LLM provider available: True" in captured.out
         assert "Cache service available: True" in captured.out
         assert "Telemetry service available: True" in captured.out
         assert "Creating SampleCommand" in captured.out
@@ -171,7 +186,7 @@ class TestCustomCommandInvokerFactory:
             telemetry_service=MagicMock(),
             cache_service=None,
             blob_service=MagicMock(),
-            openai_service=None
+            llm_provider=None
         )
 
         # Act
@@ -180,9 +195,12 @@ class TestCustomCommandInvokerFactory:
             ai_command = factory.create(AISampleCommand)
 
         # Assert
-        assert blob_command._telemetry_service is not None
-        assert blob_command._blob_service is not None
+        from openapi_plugin_common.log_events import LoggedCommandWrapper
+        assert isinstance(blob_command, LoggedCommandWrapper)
+        assert blob_command.command._telemetry_service is not None
+        assert blob_command.command._blob_service is not None
 
-        assert ai_command._telemetry_service is not None
-        assert ai_command._cache_service is None
-        assert ai_command._openai_service is None
+        assert isinstance(ai_command, LoggedCommandWrapper)
+        assert ai_command.command._telemetry_service is not None
+        assert ai_command.command._cache_service is None
+        assert ai_command.command._llm_provider is None

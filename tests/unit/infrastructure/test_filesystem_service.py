@@ -242,7 +242,7 @@ class TestFilesystemBlobService:
         # Act
         listed_blobs = []
         async for blob in blob_service.list_blobs_async(
-            container_name, file_type=SupportedFileType.IMAGE
+            container_name, file_type=SupportedFileType.JPG
         ):
             listed_blobs.append(blob)
 
