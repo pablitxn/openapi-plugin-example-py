@@ -1,0 +1,239 @@
+{
+	"info": {
+		"_postman_id": "example-plugin-collection",
+		"name": "Example Plugin API",
+		"description": "Example OpenAPI plugin demonstrating command/handler pattern with authentication",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{bearer_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Sample",
+			"item": [
+				{
+					"name": "Process Sample Request",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-chat-id",
+								"value": "{{chat_id}}",
+								"type": "text"
+							},
+							{
+								"key": "x-agent-id",
+								"value": "{{agent_id}}",
+								"type": "text"
+							},
+							{
+								"key": "x-agent-version",
+								"value": "{{agent_version}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/sample?sample_input=Hello World&use_cache=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"sample"
+							],
+							"query": [
+								{
+									"key": "sample_input",
+									"value": "Hello World"
+								},
+								{
+									"key": "use_cache",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Processes a sample input and returns a processed response"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AI",
+			"item": [
+				{
+					"name": "Process AI Sample Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-chat-id",
+								"value": "{{chat_id}}",
+								"type": "text"
+							},
+							{
+								"key": "x-agent-id",
+								"value": "{{agent_id}}",
+								"type": "text"
+							},
+							{
+								"key": "x-agent-version",
+								"value": "{{agent_version}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"messages\": [\n        {\n            \"role\": \"system\",\n            \"content\": \"You are a helpful assistant.\"\n        },\n        {\n            \"role\": \"user\",\n            \"content\": \"Explain quantum computing in simple terms\"\n        }\n    ],\n    \"model\": \"gpt-4o-mini\",\n    \"temperature\": 0.7,\n    \"max_tokens\": 1000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/ai-sample",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai-sample"
+							]
+						},
+						"description": "Processes a prompt using AI and returns the generated response"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Blob",
+			"item": [
+				{
+					"name": "Upload File to Blob Storage",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-chat-id",
+								"value": "{{chat_id}}",
+								"type": "text"
+							},
+							{
+								"key": "x-agent-id",
+								"value": "{{agent_id}}",
+								"type": "text"
+							},
+							{
+								"key": "x-agent-version",
+								"value": "{{agent_version}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"file_name\": \"document.pdf\",\n    \"file_content_base64\": \"JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL1Jlc291cmNlczw8L0ZvbnQ8PC9GMSA0IDAgUj4+Pj4vTWVkaWFCb3hbMCAwIDYxMiA3OTJdL0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj4KZW5kb2JqCjUgMCBvYmoKPDwvTGVuZ3RoIDQ0Pj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgo1MCA3NTAgVGQKKFNhbXBsZSBQREYgRG9jdW1lbnQpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAwNjggMDAwMDAgbiAKMDAwMDAwMDEyNSAwMDAwMCBuIAowMDAwMDAwMjU5IDAwMDAwIG4gCjAwMDAwMDAzMzYgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDYvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgo0MzEKJSVFT0Y=\",\n    \"container_name\": \"uploaded-files\",\n    \"metadata\": {\n        \"source\": \"postman-test\",\n        \"type\": \"pdf\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/blob-sample",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"blob-sample"
+							]
+						},
+						"description": "Uploads a file to Azure blob storage and returns the blob URL"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Data Visualization",
+			"item": [
+				{
+					"name": "Create Plot from Excel",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-chat-id",
+								"value": "{{chat_id}}",
+								"type": "text"
+							},
+							{
+								"key": "x-agent-id",
+								"value": "{{agent_id}}",
+								"type": "text"
+							},
+							{
+								"key": "x-agent-version",
+								"value": "{{agent_version}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"excel_url\": \"https://storage.azure.com/data/sales_data.xlsx\",\n    \"plot_type\": \"bar\",\n    \"x_column\": \"Month\",\n    \"y_column\": \"Sales\",\n    \"title\": \"Monthly Sales Report\",\n    \"sheet_name\": \"Sheet1\",\n    \"figure_size\": [10, 6]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/create-plot",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"create-plot"
+							]
+						},
+						"description": "Downloads Excel file from blob storage, creates a plot, and uploads it back"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Returns the health status of the service"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
