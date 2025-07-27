@@ -135,7 +135,7 @@ class TestBlobSampleHandler:
             agent_id="test-agent",
             agent_version="1.0.0",
             file_name="test.pdf",
-            file_content_base64="invalid-base64-content!@#",
+            file_content_base64="this is definitely not base64!",
             container_name=None
         )
         
