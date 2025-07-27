@@ -4,7 +4,7 @@ from typing import Optional, List
 from openapi_plugin_common import GenEYClientBase
 
 from ...config import get_settings
-from ..file_validation import FileTypeValidator
+from ..file_validation import create_geney_validator
 
 
 class GenEYClient(GenEYClientBase):
@@ -30,7 +30,7 @@ class GenEYClient(GenEYClientBase):
         # Initialize file validator with plugin's allowed types or from settings
         if allowed_file_types is None:
             allowed_file_types = settings.plugin_options.supported_file_types
-        self.file_validator = FileTypeValidator(allowed_file_types)
+        self.file_validator = create_geney_validator(allowed_file_types)
     
     @property
     def client_id(self) -> str:

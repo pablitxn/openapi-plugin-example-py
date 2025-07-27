@@ -50,7 +50,7 @@ async def test_sample():
 async def test_ai_sample():
     """Test AI sample endpoint."""
     print("\n=== Testing AI Sample Endpoint ===")
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         data = {
             "sample_prompt": "Explain quantum computing in simple terms",
             "use_ai": True,
