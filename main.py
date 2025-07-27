@@ -24,7 +24,6 @@ from src.openapi_plugin_example_py.infrastructure.command_factory import (
     CustomCommandInvokerFactory,
 )
 from src.openapi_plugin_example_py.infrastructure.security import JWTBearer
-from src.openapi_plugin_example_py.infrastructure.security.mock_auth import MockJWTBearer
 
 # Configure logging
 logging.basicConfig(
@@ -147,11 +146,8 @@ async def global_exception_handler(request, exc):
 # Include routers
 from fastapi import Depends
 
-# Choose authentication based on bypass setting
-auth_dependency = (
-    MockJWTBearer() if settings.bypass_auth 
-    else JWTBearer(api_audience=settings.security.api_audience)
-)
+# Configure authentication with bypass support
+auth_dependency = JWTBearer(api_audience=settings.security.api_audience)
 
 app.include_router(
     plugin_controller.router,
