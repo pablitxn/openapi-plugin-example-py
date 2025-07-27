@@ -145,15 +145,26 @@ async def get_cache_service_for_app(app: FastAPI):
 async def get_blob_service_for_app(app: FastAPI):
     """Get blob service for app initialization."""
     settings = app.state.settings
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Getting blob service - use_filesystem_storage: {settings.use_filesystem_storage}")
+    logger.info(f"Filesystem storage path: {settings.filesystem_storage_path}")
     
     # Use filesystem storage in development/bypass mode
     if settings.use_filesystem_storage:
         from ...infrastructure.blob_storage.filesystem_service import FilesystemBlobService
-        return FilesystemBlobService(settings.filesystem_storage_path)
+        service = FilesystemBlobService(settings.filesystem_storage_path)
+        logger.info(f"Created FilesystemBlobService at path: {settings.filesystem_storage_path}")
+        return service
     
     # Use Azure Blob Storage in production
     if settings.blob_storage and settings.blob_storage.connection_string:
-        return AzureBlobService(settings.blob_storage.connection_string)
+        service = AzureBlobService(settings.blob_storage.connection_string)
+        logger.info("Created AzureBlobService")
+        return service
+    
+    logger.warning("No blob service configured!")
     return None
 
 

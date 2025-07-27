@@ -62,6 +62,13 @@ async def lifespan(app: FastAPI):
     # Setup dependencies to create services and handlers
     await setup_dependencies(app)
     
+    # Debug logging
+    logger.info(f"Settings loaded - environment: {settings.environment}")
+    logger.info(f"Use filesystem storage: {settings.use_filesystem_storage}")
+    logger.info(f"Filesystem storage path: {settings.filesystem_storage_path}")
+    logger.info(f"Bypass auth: {settings.bypass_auth}")
+    logger.info(f"OpenAI API key configured: {settings.plugin_options.openai is not None and settings.plugin_options.openai.api_key is not None}")
+    
     # Create command factory with all services
     app.state.command_invoker_factory = CustomCommandInvokerFactory(
         telemetry_service=telemetry_service,
@@ -73,6 +80,8 @@ async def lifespan(app: FastAPI):
     logger.info("Example Plugin started successfully")
     logger.info(f"Blob service configured: {app.state.blob_service is not None}")
     logger.info(f"Blob service type: {type(app.state.blob_service)}")
+    logger.info(f"OpenAI service configured: {app.state.openai_service is not None}")
+    logger.info(f"Cache service configured: {app.state.cache_service is not None}")
     
     yield
     

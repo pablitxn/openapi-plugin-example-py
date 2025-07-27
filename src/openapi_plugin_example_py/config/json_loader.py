@@ -1,8 +1,37 @@
 """JSON configuration loader for the application."""
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict
+
+
+def expand_env_vars(value: Any) -> Any:
+    """Expand environment variables in configuration values.
+    
+    Args:
+        value: Configuration value (string, dict, list, etc.)
+    
+    Returns:
+        Value with environment variables expanded
+    """
+    if isinstance(value, str):
+        # Replace ${VAR} or $VAR patterns with environment variable values
+        def replacer(match):
+            var_name = match.group(1) or match.group(2)
+            return os.environ.get(var_name, match.group(0))
+        
+        # Handle ${VAR} pattern
+        value = re.sub(r'\$\{([^}]+)\}', replacer, value)
+        # Handle $VAR pattern
+        value = re.sub(r'\$([A-Z_][A-Z0-9_]*)', replacer, value)
+        return value
+    elif isinstance(value, dict):
+        return {k: expand_env_vars(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [expand_env_vars(item) for item in value]
+    else:
+        return value
 
 
 def load_json_config(environment: str = None) -> Dict[str, Any]:
@@ -12,7 +41,7 @@ def load_json_config(environment: str = None) -> Dict[str, Any]:
         environment: Environment name (e.g., 'Development', 'Production')
     
     Returns:
-        Merged configuration dictionary
+        Merged configuration dictionary with environment variables expanded
     """
     config = {}
     
@@ -30,6 +59,9 @@ def load_json_config(environment: str = None) -> Dict[str, Any]:
                 env_config = json.load(f)
                 # Deep merge configurations
                 config = deep_merge(config, env_config)
+    
+    # Expand environment variables
+    config = expand_env_vars(config)
     
     return config
 

@@ -29,9 +29,12 @@ class BasePluginHandler(RequestHandlerBase[TRequest, TResponse]):
         context: TContext
     ) -> None:
         """Execute a command with the proper invoker setup."""
-        # Create and execute command using CommandInvoker
-        print(f"BasePluginHandler: Creating invoker for {command_type}")
+        # Create and execute command directly using our custom factory
+        print(f"BasePluginHandler: Creating command for {command_type}")
         print(f"BasePluginHandler: Command factory type: {type(self._command_invoker_factory)}")
-        command_invoker = CommandInvoker(command_type, self._telemetry_service)
-        command_invoker._command_factory = self._command_invoker_factory
-        await command_invoker.invoke_async(context, self._plugin_options)
+        
+        # Use our custom factory to create the command with all services injected
+        command = self._command_invoker_factory.create(command_type)
+        
+        # Execute the command directly
+        await command.execute_async(context, self._plugin_options, None)

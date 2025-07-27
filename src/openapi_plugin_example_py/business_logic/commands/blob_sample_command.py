@@ -111,15 +111,13 @@ class BlobSampleCommand(CommandBase[BlobSampleCommandContext, ExamplePluginOptio
             blob_name = f"{context.chat_id}/{timestamp}_{unique_id}_{context.file_name}"
             
             # Upload to blob storage
-            await self._blob_service.upload_blob_async(
-                blob=context.file_content,
-                file_name=blob_name,
-                container_name=context.container_name,
+            blob_url = await self._blob_service.upload_blob_async(
+                container_name=context.container_name or "dev-uploads",
+                blob_name=blob_name,
+                data=context.file_content,
+                content_type=f"application/{file_type.value}",
                 metadata=metadata
             )
-            
-            # Get blob URL (assuming the service provides this method)
-            blob_url = self._construct_blob_url(blob_name, context.container_name)
             
             return BlobSampleCommandResult(
                 blob_url=blob_url,

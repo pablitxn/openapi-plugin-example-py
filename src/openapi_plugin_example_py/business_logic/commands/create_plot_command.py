@@ -135,6 +135,18 @@ class CreatePlotCommand(CommandBase[CreatePlotCommandContext, ExamplePluginOptio
     
     async def _download_excel_from_url(self, excel_url: str) -> bytes:
         """Download Excel file from blob storage URL."""
+        # Handle filesystem URLs (file://)
+        if excel_url.startswith("file://"):
+            # For filesystem storage, extract the blob name from the path
+            # Example: file:///absolute/path/to/mock_storage/dev-uploads/test_sales_data.xlsx
+            import os
+            file_path = excel_url.replace("file://", "")
+            
+            # Read the file directly
+            with open(file_path, 'rb') as f:
+                return f.read()
+        
+        # Handle Azure blob storage URLs
         # Extract blob name from URL
         # Example: https://storage.azure.com/data/sales_data.xlsx
         parts = excel_url.split('/')
@@ -146,8 +158,8 @@ class CreatePlotCommand(CommandBase[CreatePlotCommandContext, ExamplePluginOptio
         
         # Download blob
         blob_data = await self._blob_service.download_blob_async(
-            blob_name=blob_name,
-            container_name=container_name
+            container_name=container_name,
+            blob_name=blob_name
         )
         
         return blob_data
@@ -246,18 +258,15 @@ class CreatePlotCommand(CommandBase[CreatePlotCommandContext, ExamplePluginOptio
         blob_name = f"{chat_id}/plots/{file_name}"
         
         # Upload to blob storage
-        await self._blob_service.upload_blob_async(
-            blob=plot_buffer.getvalue(),
-            file_name=blob_name,
+        plot_url = await self._blob_service.upload_blob_async(
             container_name="plots",
+            blob_name=blob_name,
+            data=plot_buffer.getvalue(),
+            content_type="image/png",
             metadata={
                 "chat_id": chat_id,
-                "plot_type": plot_type,
-                "content_type": "image/png"
+                "plot_type": plot_type
             }
         )
-        
-        # Construct URL
-        plot_url = f"https://storage.azure.com/plots/{blob_name}"
         
         return plot_url, file_name
