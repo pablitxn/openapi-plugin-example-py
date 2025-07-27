@@ -4,6 +4,7 @@ from typing import Dict, Optional
 from openapi_plugin_common import (
     CacheConfig,
     OpenAIConfig,
+    AzureOpenAIConfig,
     PluginOptionsBase,
     PromptsConfig,
     SchemasConfig,
@@ -32,10 +33,16 @@ class ExamplePluginOptions(PluginOptionsBase):
         description="Cache configuration"
     )
     
-    # OpenAI configuration
+    # OpenAI configuration (deprecated - use azure_openai instead)
     openai: Optional[OpenAIConfig] = Field(
         default=None,
-        description="OpenAI configuration"
+        description="OpenAI configuration (deprecated - use azure_openai instead)"
+    )
+    
+    # Azure OpenAI configuration
+    azure_openai: Optional[AzureOpenAIConfig] = Field(
+        default=None,
+        description="Azure OpenAI configuration"
     )
     
     # Additional plugin-specific settings

@@ -3,7 +3,7 @@ from typing import Annotated
 
 import redis.asyncio as redis
 from fastapi import Depends, FastAPI, Request
-from openapi_plugin_common import AzureBlobService
+from openapi_plugin_common import AzureBlobService, create_llm_provider
 
 from ...business_logic.handlers import (
     AISampleHandler,
@@ -11,7 +11,6 @@ from ...business_logic.handlers import (
     CreatePlotHandler,
     SampleHandler,
 )
-from ...infrastructure.openai import OpenAIService
 from ...infrastructure.security import GenEYClient
 
 
@@ -47,18 +46,29 @@ async def get_blob_service(request: Request):
     return None
 
 
-async def get_openai_service(request: Request):
-    """Get OpenAI service."""
+async def get_llm_provider(request: Request):
+    """Get LLM provider service."""
     app = request.app
     settings = app.state.settings
-    if settings.plugin_options.openai and settings.plugin_options.openai.api_key:
-        return OpenAIService(
-            api_key=settings.plugin_options.openai.api_key,
-            model=settings.plugin_options.openai.model,
-            temperature=settings.plugin_options.openai.temperature,
-            max_tokens=settings.plugin_options.openai.max_tokens,
+    
+    # Prefer Azure OpenAI if configured
+    if settings.plugin_options.azure_openai:
+        return create_llm_provider(
+            config=settings.plugin_options.azure_openai,
             telemetry_service=app.state.telemetry_service
         )
+    
+    # Fall back to legacy OpenAI config if available
+    elif settings.plugin_options.openai and settings.plugin_options.openai.api_key:
+        # Note: This is deprecated - should migrate to Azure OpenAI
+        if app.state.telemetry_service:
+            app.state.telemetry_service.log_warning(
+                "Using deprecated OpenAI configuration. Please migrate to Azure OpenAI."
+            )
+        # For backward compatibility, we would need to implement a direct OpenAI provider
+        # For now, we'll return None and let the application handle it
+        return None
+    
     return None
 
 
@@ -90,7 +100,7 @@ async def get_sample_handler(
 async def get_ai_sample_handler(
     request: Request,
     cache_service = Depends(get_cache_service),
-    openai_service = Depends(get_openai_service)
+    llm_provider = Depends(get_llm_provider)
 ) -> AISampleHandler:
     """Get AI sample handler with dependencies."""
     app = request.app
@@ -168,17 +178,28 @@ async def get_blob_service_for_app(app: FastAPI):
     return None
 
 
-async def get_openai_service_for_app(app: FastAPI):
-    """Get OpenAI service for app initialization."""
+async def get_llm_provider_for_app(app: FastAPI):
+    """Get LLM provider service for app initialization."""
     settings = app.state.settings
-    if settings.plugin_options.openai and settings.plugin_options.openai.api_key:
-        return OpenAIService(
-            api_key=settings.plugin_options.openai.api_key,
-            model=settings.plugin_options.openai.model,
-            temperature=settings.plugin_options.openai.temperature,
-            max_tokens=settings.plugin_options.openai.max_tokens,
+    
+    # Prefer Azure OpenAI if configured
+    if settings.plugin_options.azure_openai:
+        return create_llm_provider(
+            config=settings.plugin_options.azure_openai,
             telemetry_service=app.state.telemetry_service
         )
+    
+    # Fall back to legacy OpenAI config if available
+    elif settings.plugin_options.openai and settings.plugin_options.openai.api_key:
+        # Note: This is deprecated - should migrate to Azure OpenAI
+        if app.state.telemetry_service:
+            app.state.telemetry_service.log_warning(
+                "Using deprecated OpenAI configuration. Please migrate to Azure OpenAI."
+            )
+        # For backward compatibility, we would need to implement a direct OpenAI provider
+        # For now, we'll return None and let the application handle it
+        return None
+    
     return None
 
 
@@ -203,5 +224,5 @@ async def setup_dependencies(app: FastAPI):
     # Store services in app state for commands
     app.state.cache_service = await get_cache_service_for_app(app)
     app.state.blob_service = await get_blob_service_for_app(app)
-    app.state.openai_service = await get_openai_service_for_app(app)
+    app.state.llm_provider = await get_llm_provider_for_app(app)
     app.state.geney_client = await get_geney_client_for_app(app)

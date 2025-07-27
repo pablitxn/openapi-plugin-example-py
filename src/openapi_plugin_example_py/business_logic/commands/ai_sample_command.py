@@ -8,6 +8,7 @@ from openapi_plugin_common import (
     CommandException,
     ConfigurationException,
     ValidationException,
+    LLMProvider,
 )
 
 from ..options import ExamplePluginOptions
@@ -50,19 +51,19 @@ class AISampleCommand(CommandBase[AISampleCommandContext, ExamplePluginOptions])
     def __init__(
         self,
         telemetry_service: Optional[object] = None,
-        openai_service: Optional[object] = None,
+        llm_provider: Optional[LLMProvider] = None,
         cache_service: Optional[object] = None
     ) -> None:
         """Initialize the command."""
         super().__init__(telemetry_service)
-        self._openai_service = openai_service
+        self._llm_provider = llm_provider
         self._cache_service = cache_service
     
     async def execute_command_async(self, context: AISampleCommandContext) -> None:
         """Execute the AI sample command logic."""
         # Check if AI service is available
-        if not self._openai_service and context.use_ai:
-            raise ConfigurationException("OpenAI service is not configured")
+        if not self._llm_provider and context.use_ai:
+            raise ConfigurationException("LLM provider is not configured")
         
         # Check cache first
         cache_key = f"ai_sample:{context.chat_id}:{hash(context.sample_prompt)}"
@@ -77,7 +78,7 @@ class AISampleCommand(CommandBase[AISampleCommandContext, ExamplePluginOptions])
                 return
         
         # Process with AI
-        if context.use_ai and self._openai_service:
+        if context.use_ai and self._llm_provider:
             result = await self._process_with_ai(context)
         else:
             # Fallback to non-AI processing
@@ -101,8 +102,8 @@ class AISampleCommand(CommandBase[AISampleCommandContext, ExamplePluginOptions])
             system_prompt = "You are a helpful AI assistant for processing sample requests."
             user_prompt = context.sample_prompt
             
-            # Call OpenAI service
-            response = await self._openai_service.generate_completion(
+            # Call LLM provider
+            response = await self._llm_provider.generate_completion(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 chat_id=context.chat_id
@@ -117,13 +118,13 @@ class AISampleCommand(CommandBase[AISampleCommandContext, ExamplePluginOptions])
                 self._telemetry_service.log_event("AIProcessingCompleted", {
                     "ChatId": context.chat_id,
                     "PromptLength": str(len(context.sample_prompt)),
-                    "ResponseLength": str(len(response.get("content", "")))
+                    "ResponseLength": str(len(response.content))
                 })
             
             return AISampleCommandResult(
-                ai_response=response.get("content", ""),
-                model_used=response.get("model"),
-                tokens_used=response.get("usage", {}).get("total_tokens")
+                ai_response=response.content,
+                model_used=response.model,
+                tokens_used=response.usage.get("total_tokens")
             )
             
         except Exception as e:
@@ -145,10 +146,10 @@ class AISampleCommand(CommandBase[AISampleCommandContext, ExamplePluginOptions])
             tokens_used=0
         )
     
-    def _validate_response_schema(self, response: dict) -> None:
+    def _validate_response_schema(self, response) -> None:
         """Validate the AI response against schema."""
         # Simple validation - in real implementation would use JSON Schema
-        if not response.get("content"):
+        if not hasattr(response, "content") or not response.content:
             raise ValidationException("AI response missing 'content' field")
     
     async def _get_from_cache(self, key: str) -> Optional[dict]:
