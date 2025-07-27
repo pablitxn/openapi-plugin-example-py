@@ -1,5 +1,7 @@
 """Configuration module for the example plugin."""
-from .settings import AppSettings, SecuritySettings, get_settings
+from openapi_plugin_common import SecuritySettings
+
+from .settings import AppSettings, get_settings
 
 __all__ = [
     "AppSettings",
