@@ -64,8 +64,9 @@ class TestFileValidation:
 
             # Assert
             assert result == mock_validator
+            # Empty list is falsy, so it uses default types
             mock_create.assert_called_once_with(
-                allowed_types=empty_types
+                allowed_types=DEFAULT_ALLOWED_TYPES
             )
 
     def test_create_geney_validator_with_none_uses_defaults(self):

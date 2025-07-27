@@ -2,7 +2,7 @@
 import os
 import json
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncGenerator, Optional, List, Dict
 from openapi_plugin_common import IBlobService, BlobItemInfo, SupportedFileType
@@ -51,7 +51,7 @@ class FilesystemBlobService(IBlobService):
             meta_data = {
                 "content_type": content_type,
                 "metadata": metadata or {},
-                "created": datetime.utcnow().isoformat(),
+                "created": datetime.now(timezone.utc).isoformat(),
                 "size": len(data)
             }
             meta_path.write_text(json.dumps(meta_data, indent=2))
@@ -126,7 +126,7 @@ class FilesystemBlobService(IBlobService):
                 yield BlobItemInfo(
                     name=blob_name,
                     size=file_path.stat().st_size,
-                    last_modified=datetime.fromtimestamp(file_path.stat().st_mtime),
+                    created_on=datetime.fromtimestamp(file_path.stat().st_mtime).isoformat(),
                     content_type=content_type,
                     metadata=metadata
                 )
@@ -161,7 +161,7 @@ class FilesystemBlobService(IBlobService):
         return BlobItemInfo(
             name=blob_name,
             size=blob_path.stat().st_size,
-            last_modified=datetime.fromtimestamp(blob_path.stat().st_mtime),
+            created_on=datetime.fromtimestamp(blob_path.stat().st_mtime).isoformat(),
             content_type=content_type,
             metadata=metadata
         )

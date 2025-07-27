@@ -129,7 +129,10 @@ class TestGetSettings:
         # Arrange
         mock_settings = AppSettings(
             api_prefix="/env/api",
-            plugin_options=ExamplePluginOptions(max_file_size_mb=30)
+            plugin_options=ExamplePluginOptions(
+                schemas=SchemasConfig(),  # Required field
+                max_file_size_mb=30
+            )
         )
         
         with patch('src.openapi_plugin_example_py.config.settings.get_base_settings', 

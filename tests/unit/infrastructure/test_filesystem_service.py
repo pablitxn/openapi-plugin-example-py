@@ -274,7 +274,7 @@ class TestFilesystemBlobService:
         assert properties.size == len(data)
         assert properties.content_type == content_type
         assert properties.metadata == metadata
-        assert isinstance(properties.last_modified, datetime)
+        assert properties.created_on is not None
 
     @pytest.mark.asyncio
     async def test_get_blob_properties_async_not_found(self, blob_service):

@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from openapi_plugin_common import CommandBase
+from openapi_plugin_common import CommandBase, CommandInvokerFactory
 from src.openapi_plugin_example_py.infrastructure.command_factory import (
     CustomCommandInvokerFactory
 )

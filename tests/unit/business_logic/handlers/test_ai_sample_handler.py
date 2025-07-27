@@ -17,7 +17,7 @@ from src.openapi_plugin_example_py.business_logic.requests.ai_sample_request imp
 from src.openapi_plugin_example_py.business_logic.options.plugin_options import (
     ExamplePluginOptions
 )
-from openapi_plugin_common import OpenAIConfig, BasePluginRequest
+from openapi_plugin_common import OpenAIConfig
 
 
 class TestAISampleHandler:
