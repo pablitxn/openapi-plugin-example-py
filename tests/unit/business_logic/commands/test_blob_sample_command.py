@@ -66,7 +66,7 @@ class TestBlobSampleCommand:
         mock_uuid.__str__ = MagicMock(return_value='12345678-1234-1234-1234-123456789012')
         with patch('uuid.uuid4', return_value=mock_uuid):
             with patch('datetime.datetime') as mock_datetime:
-                mock_datetime.utcnow.return_value.strftime.return_value = '20240101_120000'
+                mock_datetime.now.return_value.strftime.return_value = '20240101_120000'
                 await command.execute_command_async(sample_context)
 
         # Assert
@@ -133,7 +133,7 @@ class TestBlobSampleCommand:
         mock_uuid.__str__ = MagicMock(return_value='12345678-1234-1234-1234-123456789012')
         with patch('uuid.uuid4', return_value=mock_uuid):
             with patch('datetime.datetime') as mock_datetime:
-                mock_datetime.utcnow.return_value.strftime.return_value = '20240101_120000'
+                mock_datetime.now.return_value.strftime.return_value = '20240101_120000'
                 result = await command._upload_blob(sample_context, file_type)
 
         # Assert

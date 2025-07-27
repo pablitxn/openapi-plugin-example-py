@@ -104,9 +104,9 @@ class BlobSampleCommand(CommandBase[BlobSampleCommandContext, ExamplePluginOptio
             
             # Create unique blob name
             import uuid
-            from datetime import datetime
+            from datetime import datetime, timezone
             
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             unique_id = str(uuid.uuid4())[:8]
             blob_name = f"{context.chat_id}/{timestamp}_{unique_id}_{context.file_name}"
             

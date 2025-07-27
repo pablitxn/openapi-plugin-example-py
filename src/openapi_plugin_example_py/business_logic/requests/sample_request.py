@@ -2,7 +2,7 @@
 from typing import Optional
 
 from openapi_plugin_common import RequestBase
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SampleRequest(RequestBase):
@@ -11,9 +11,9 @@ class SampleRequest(RequestBase):
     sample_input: str = Field(
         ...,
         description="The sample input to process",
-        example="Hello World",
         min_length=1,
-        max_length=1000
+        max_length=1000,
+        json_schema_extra={"example": "Hello World"}
     )
     use_cache: bool = Field(
         default=True,
@@ -37,12 +37,12 @@ class SampleResponse(BaseModel):
         description="Processing time in milliseconds"
     )
     
-    class Config:
-        """Pydantic configuration."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "sample_response": "Processed: HELLO WORLD",
                 "cached": False,
                 "processing_time_ms": 123.45
             }
         }
+    )

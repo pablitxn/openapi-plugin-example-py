@@ -2,7 +2,7 @@
 from typing import Optional
 
 from openapi_plugin_common import RequestBase
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AISampleRequest(RequestBase):
@@ -11,9 +11,9 @@ class AISampleRequest(RequestBase):
     sample_prompt: str = Field(
         ...,
         description="The prompt to send to the AI model",
-        example="Explain quantum computing in simple terms",
         min_length=1,
-        max_length=2000
+        max_length=2000,
+        json_schema_extra={"example": "Explain quantum computing in simple terms"}
     )
     use_ai: bool = Field(
         default=True,
@@ -57,9 +57,8 @@ class AISampleResponse(BaseModel):
         description="Whether the response was served from cache"
     )
     
-    class Config:
-        """Pydantic configuration."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "ai_response": "Quantum computing is a type of computing that uses quantum mechanics...",
                 "model_used": "gpt-4",
@@ -67,3 +66,4 @@ class AISampleResponse(BaseModel):
                 "cached": False
             }
         }
+    )

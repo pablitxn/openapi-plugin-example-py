@@ -2,7 +2,7 @@
 from typing import Optional
 
 from openapi_plugin_common import RequestBase
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BlobSampleRequest(RequestBase):
@@ -11,8 +11,8 @@ class BlobSampleRequest(RequestBase):
     file_name: str = Field(
         ...,
         description="Name of the file to upload",
-        example="document.pdf",
-        pattern=r"^[a-zA-Z0-9_\-\.]+$"
+        pattern=r"^[a-zA-Z0-9_\-\.]+$",
+        json_schema_extra={"example": "document.pdf"}
     )
     file_content_base64: str = Field(
         ...,
@@ -50,9 +50,8 @@ class BlobSampleResponse(BaseModel):
         description="Upload time in milliseconds"
     )
     
-    class Config:
-        """Pydantic configuration."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "blob_url": "https://storage.azure.com/uploaded-files/chat-123/20240115_120000_abc123_document.pdf",
                 "file_size": 1024000,
@@ -60,3 +59,4 @@ class BlobSampleResponse(BaseModel):
                 "upload_time_ms": 234.56
             }
         }
+    )

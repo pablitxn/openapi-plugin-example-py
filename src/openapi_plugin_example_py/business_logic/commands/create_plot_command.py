@@ -1,7 +1,7 @@
 """Create plot command implementation."""
 import io
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import matplotlib
@@ -252,7 +252,7 @@ class CreatePlotCommand(CommandBase[CreatePlotCommandContext, ExamplePluginOptio
     ) -> tuple[str, str]:
         """Upload plot to blob storage."""
         # Generate unique filename
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         file_name = f"plot_{plot_type}_{timestamp}_{unique_id}.png"
         blob_name = f"{chat_id}/plots/{file_name}"

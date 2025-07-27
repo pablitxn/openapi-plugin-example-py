@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional
 
 from openapi_plugin_common import RequestBase
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CreatePlotRequest(RequestBase):
@@ -12,37 +12,37 @@ class CreatePlotRequest(RequestBase):
     excel_url: str = Field(
         ...,
         description="URL of the Excel file in blob storage",
-        example="https://storage.azure.com/data/sales_data.xlsx"
+        json_schema_extra={"example": "https://storage.azure.com/data/sales_data.xlsx"}
     )
     plot_type: str = Field(
         ...,
         description="Type of plot to create",
-        example="bar"
+        json_schema_extra={"example": "bar"}
     )
     x_column: str = Field(
         ...,
         description="Column name for X axis",
-        example="Month"
+        json_schema_extra={"example": "Month"}
     )
     y_column: str = Field(
         ...,
         description="Column name for Y axis",
-        example="Sales"
+        json_schema_extra={"example": "Sales"}
     )
     title: Optional[str] = Field(
         default=None,
         description="Title for the plot",
-        example="Monthly Sales Report"
+        json_schema_extra={"example": "Monthly Sales Report"}
     )
     sheet_name: Optional[str] = Field(
         default=None,
         description="Excel sheet name to read from",
-        example="Sheet1"
+        json_schema_extra={"example": "Sheet1"}
     )
     figure_size: Optional[tuple[int, int]] = Field(
         default=(10, 6),
         description="Figure size in inches (width, height)",
-        example=(10, 6)
+        json_schema_extra={"example": (10, 6)}
     )
 
 
@@ -70,9 +70,8 @@ class CreatePlotResponse(BaseModel):
         description="Number of data points plotted"
     )
     
-    class Config:
-        """Pydantic configuration."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "plot_url": "https://storage.azure.com/plots/20240726_plot_123.png",
                 "plot_type": "bar",
@@ -81,3 +80,4 @@ class CreatePlotResponse(BaseModel):
                 "data_points": 12
             }
         }
+    )
