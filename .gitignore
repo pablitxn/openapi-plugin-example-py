@@ -1,3 +1,8 @@
 .idea/
 **/__pycache__/
 mock_storage/
+
+# Keep local credentials out of version control.
+.env
+.env.*
+!.env.example

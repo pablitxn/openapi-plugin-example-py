@@ -229,6 +229,15 @@ class FileRepository:
    # Edit .env with your configuration
    ```
 
+   Keep real credentials in your local `.env` or inject them at runtime. Git and
+   Docker exclude private `.env` files; only the sanitized `.env.example` belongs
+   in the repository. Container deployments must supply their settings at runtime,
+   for example with `docker run --env-file /path/to/private.env ...`. Do not use
+   the development authentication bypass in production. OpenAI remains optional.
+
+   If a credential was previously committed, revoke or rotate it with its provider;
+   deleting the file does not invalidate copies in Git history or existing images.
+
 4. **Run Development Server**
    ```bash
    poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8000

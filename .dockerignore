@@ -1,0 +1,9 @@
+# Exclude credentials and Git history from the build context.
+.git
+**/.git
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
